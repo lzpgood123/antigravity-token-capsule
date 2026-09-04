@@ -43,14 +43,20 @@ class DataEngine(QObject):
         super().__init__(parent)
         self.session_file = os.path.expanduser("~/.gemini/antigravity/active_session.json")
         self.conv_dir = os.path.expanduser("~/.gemini/antigravity/conversations")
+        self.brain_dir = os.path.expanduser("~/.gemini/antigravity/brain")
         self.devtools_file = os.path.expanduser("~/AppData/Roaming/Antigravity/DevToolsActivePort")
         
         self.current_conv_id = ""
         self.auto_follow = True
         self.last_db_mtime = 0
+        self.last_transcript_mtime = 0
         self.cached_cdp_port = ""
         self.titles_cache = {}
         self.last_titles_fetch = 0
+
+        # 子智能体发现缓存与文件监听状态
+        self.discovered_subagents = {}  # conv_id -> dict of subagent info
+        self.subagent_db_mtimes = {}   # sub_id -> float mtime
 
         # 定时器：300ms 快速无锁轮询，精准跟随用户当前界面
         self.poll_timer = QTimer(self)
@@ -125,6 +131,9 @@ class DataEngine(QObject):
                     # 用户在前台切换了会话！立即切换数据源
                     self.current_conv_id = cdp_conv_id
                     self.last_db_mtime = 0
+                    self.last_transcript_mtime = 0
+                    self.discovered_subagents.clear()
+                    self.subagent_db_mtimes.clear()
                     full_data = self.get_convo_stats(cdp_conv_id)
                     if full_data:
                         self.session_updated.emit(full_data)
@@ -139,6 +148,10 @@ class DataEngine(QObject):
         if self.current_conv_id:
             db_path = os.path.join(self.conv_dir, f"{self.current_conv_id}.db")
             wal_path = os.path.join(self.conv_dir, f"{self.current_conv_id}.db-wal")
+            t_path = os.path.join(self.brain_dir, self.current_conv_id, ".system_generated", "logs", "transcript.jsonl")
+            has_changes = False
+
+            # (1) 主会话数据库
             if os.path.exists(db_path):
                 try:
                     # 在 SQLite WAL 模式下，多步工具调用的增量元数据全部实时写在 -wal 文件中
@@ -150,11 +163,40 @@ class DataEngine(QObject):
 
                     if m != self.last_db_mtime:
                         self.last_db_mtime = m
-                        full_data = self.get_convo_stats(self.current_conv_id)
-                        if full_data:
-                            self.session_updated.emit(full_data)
+                        has_changes = True
                 except Exception:
                     pass
+
+            # (2) 主会话日志（子智能体派生与生命周期变动）
+            if os.path.exists(t_path):
+                try:
+                    tm = os.path.getmtime(t_path) + os.path.getsize(t_path) * 1e-6
+                    if tm != self.last_transcript_mtime:
+                        self.last_transcript_mtime = tm
+                        has_changes = True
+                except Exception:
+                    pass
+
+            # (3) 各子智能体的数据库
+            for sub_id in list(self.discovered_subagents.keys()):
+                s_db = os.path.join(self.conv_dir, f"{sub_id}.db")
+                s_wal = os.path.join(self.conv_dir, f"{sub_id}.db-wal")
+                if os.path.exists(s_db):
+                    try:
+                        sm = os.path.getmtime(s_db)
+                        if os.path.exists(s_wal):
+                            sm = max(sm, os.path.getmtime(s_wal))
+                            sm += os.path.getsize(s_wal) * 1e-6
+                        if sm != self.subagent_db_mtimes.get(sub_id, 0):
+                            self.subagent_db_mtimes[sub_id] = sm
+                            has_changes = True
+                    except Exception:
+                        pass
+
+            if has_changes:
+                full_data = self.get_convo_stats(self.current_conv_id)
+                if full_data:
+                    self.session_updated.emit(full_data)
 
     def _fallback_load_active_file(self):
         if os.path.exists(self.session_file):
@@ -164,6 +206,8 @@ class DataEngine(QObject):
                 conv_id = data.get("conversationId", "")
                 if conv_id:
                     self.current_conv_id = conv_id
+                    self.discovered_subagents.clear()
+                    self.subagent_db_mtimes.clear()
                     full_data = self.get_convo_stats(conv_id, fallback_data=data)
                     if full_data:
                         self.session_updated.emit(full_data)
@@ -179,11 +223,51 @@ class DataEngine(QObject):
             cdp_id = self.get_cdp_active_conversation_id()
             if cdp_id:
                 self.current_conv_id = cdp_id
+                self.discovered_subagents.clear()
+                self.subagent_db_mtimes.clear()
                 full_data = self.get_convo_stats(cdp_id)
                 if full_data:
                     self.session_updated.emit(full_data)
                     return
             self._fallback_load_active_file()
+
+    def _record_current_mtimes(self):
+        """记录当前会话及其子智能体当前的 db / wal / transcript mtime，防止轮询初次误判"""
+        if not self.current_conv_id:
+            return
+        db_path = os.path.join(self.conv_dir, f"{self.current_conv_id}.db")
+        wal_path = os.path.join(self.conv_dir, f"{self.current_conv_id}.db-wal")
+        t_path = os.path.join(self.brain_dir, self.current_conv_id, ".system_generated", "logs", "transcript.jsonl")
+
+        m = 0.0
+        if os.path.exists(db_path):
+            try:
+                m = os.path.getmtime(db_path)
+                if os.path.exists(wal_path):
+                    m = max(m, os.path.getmtime(wal_path)) + os.path.getsize(wal_path) * 1e-6
+            except Exception:
+                pass
+        self.last_db_mtime = m
+
+        tm = 0.0
+        if os.path.exists(t_path):
+            try:
+                tm = os.path.getmtime(t_path) + os.path.getsize(t_path) * 1e-6
+            except Exception:
+                pass
+        self.last_transcript_mtime = tm
+
+        for sub_id in list(self.discovered_subagents.keys()):
+            s_db = os.path.join(self.conv_dir, f"{sub_id}.db")
+            s_wal = os.path.join(self.conv_dir, f"{sub_id}.db-wal")
+            if os.path.exists(s_db):
+                try:
+                    sm = os.path.getmtime(s_db)
+                    if os.path.exists(s_wal):
+                        sm = max(sm, os.path.getmtime(s_wal)) + os.path.getsize(s_wal) * 1e-6
+                    self.subagent_db_mtimes[sub_id] = sm
+                except Exception:
+                    pass
 
     def switch_to_conversation(self, conv_id: str):
         if conv_id == "__AUTO__":
@@ -192,18 +276,273 @@ class DataEngine(QObject):
             target_id = cdp_id if cdp_id else self.current_conv_id
             if target_id:
                 self.current_conv_id = target_id
-                self.last_db_mtime = 0
+                self.discovered_subagents.clear()
+                self.subagent_db_mtimes.clear()
                 full_data = self.get_convo_stats(target_id)
+                self._record_current_mtimes()
                 if full_data:
                     self.session_updated.emit(full_data)
             return
 
         self.auto_follow = False
         self.current_conv_id = conv_id
-        self.last_db_mtime = 0
+        self.discovered_subagents.clear()
+        self.subagent_db_mtimes.clear()
         full_data = self.get_convo_stats(conv_id)
+        self._record_current_mtimes()
         if full_data:
             self.session_updated.emit(full_data)
+
+    def _discover_subagents(self, primary_conv_id: str) -> list[dict]:
+        """从 primary_conv_id 的 transcript.jsonl 中动态提取派生的子智能体列表"""
+        if not primary_conv_id:
+            return []
+
+        transcript_path = os.path.join(self.brain_dir, primary_conv_id, ".system_generated", "logs", "transcript.jsonl")
+        if not os.path.exists(transcript_path):
+            return list(self.discovered_subagents.values())
+
+        pending_subagents = []
+
+        try:
+            with open(transcript_path, "r", encoding="utf-8", errors="ignore") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        data = json.loads(line)
+                    except Exception:
+                        continue
+
+                    # 1. invoke_subagent 调用参数
+                    tool_calls = data.get("tool_calls") or []
+                    for tc in tool_calls:
+                        if tc.get("name") == "invoke_subagent":
+                            args = tc.get("args", {})
+                            raw_subs = args.get("Subagents", [])
+                            if isinstance(raw_subs, str):
+                                try:
+                                    raw_subs = json.loads(raw_subs)
+                                except Exception:
+                                    raw_subs = []
+                            if isinstance(raw_subs, list):
+                                for s in raw_subs:
+                                    if isinstance(s, dict):
+                                        pending_subagents.append({
+                                            "role": s.get("Role") or s.get("role") or "Subagent",
+                                            "type": s.get("TypeName") or s.get("type") or "subagent"
+                                        })
+
+                    # 2. 子智能体创建返回
+                    content = data.get("content", "")
+                    if "Created the following subagents:" in content:
+                        cids = re.findall(r'"conversationId":\s*"([^"]+)"', content)
+                        for cid in cids:
+                            if cid not in self.discovered_subagents:
+                                info = pending_subagents.pop(0) if pending_subagents else {"role": "Subagent", "type": "subagent"}
+                                self.discovered_subagents[cid] = {
+                                    "id": cid,
+                                    "role": info["role"],
+                                    "type": info["type"],
+                                    "state": "running",
+                                    "lastAction": "运行中..."
+                                }
+
+                    # 3. active subagent(s) 状态与最新动作
+                    if "active subagent(s):" in content:
+                        b1 = content.find("[")
+                        b2 = content.rfind("]")
+                        if b1 != -1 and b2 != -1:
+                            try:
+                                active_list = json.loads(content[b1:b2+1], strict=False)
+                                for item in active_list:
+                                    cid = item.get("conversationId")
+                                    if cid:
+                                        st = item.get("state", "running")
+                                        mapped_state = "done" if st in ("idle", "done", "errored") else "running"
+                                        role = item.get("role")
+                                        sub_type = item.get("type")
+                                        state_detail = item.get("stateDetail")
+                                        if cid not in self.discovered_subagents:
+                                            self.discovered_subagents[cid] = {
+                                                "id": cid,
+                                                "role": role or "Subagent",
+                                                "type": sub_type or "subagent",
+                                                "state": mapped_state,
+                                                "lastAction": state_detail or ("已完成" if mapped_state == "done" else "运行中...")
+                                            }
+                                        else:
+                                            self.discovered_subagents[cid]["state"] = mapped_state
+                                            if role:
+                                                self.discovered_subagents[cid]["role"] = role
+                                            if sub_type:
+                                                self.discovered_subagents[cid]["type"] = sub_type
+                                            if state_detail:
+                                                self.discovered_subagents[cid]["lastAction"] = state_detail
+                                            elif mapped_state == "done" and not self.discovered_subagents[cid].get("lastAction"):
+                                                self.discovered_subagents[cid]["lastAction"] = "已完成任务"
+                            except Exception:
+                                pass
+        except Exception:
+            pass
+
+        return list(self.discovered_subagents.values())
+
+    def _extract_session_metrics(self, conv_id: str) -> dict:
+        """从对应会话的 SQLite 提取用量统计（主会话与子智能体共用）"""
+        db_path = os.path.join(self.conv_dir, f"{conv_id}.db")
+        if not os.path.exists(db_path) or not extract_usage_from_blob:
+            return {
+                "promptTokens": 0,
+                "candidateTokens": 0,
+                "cachedTokens": 0,
+                "thinkingTokens": 0,
+                "billedTokens": 0,
+                "costUsd": 0.0,
+                "avgTtft": 0.0,
+                "avgSpeed": 0.0,
+                "latest": {},
+                "has_data": False
+            }
+
+        clean_path = db_path.replace("\\", "/")
+        cum_p, cum_c, cum_ca, cum_th = 0, 0, 0, 0
+        ttft_list = []
+        cum_cand_time = 0.0
+        latest = {}
+
+        try:
+            conn = sqlite3.connect(f"file:{clean_path}?mode=ro", uri=True, timeout=0.8)
+            c = conn.cursor()
+            c.execute("SELECT idx, data FROM gen_metadata ORDER BY idx ASC")
+            rows = c.fetchall()
+            conn.close()
+
+            for idx, blob in rows:
+                u = extract_usage_from_blob(blob)
+                if u:
+                    cand = u.get("candidates", 0)
+                    ttft = u.get("ttft", 0.0)
+                    sdur = u.get("streaming_duration", 0.0)
+
+                    cum_p += u.get("prompt", 0)
+                    cum_c += cand
+                    cum_ca += u.get("cached", 0)
+                    cum_th += u.get("thinking", 0)
+
+                    if ttft > 0:
+                        ttft_list.append(ttft)
+                    tot_dur = ttft + sdur
+                    if tot_dur > 0 and cand > 0:
+                        cum_cand_time += tot_dur
+
+                    latest = u
+        except Exception:
+            return {
+                "promptTokens": 0,
+                "candidateTokens": 0,
+                "cachedTokens": 0,
+                "thinkingTokens": 0,
+                "billedTokens": 0,
+                "costUsd": 0.0,
+                "avgTtft": 0.0,
+                "avgSpeed": 0.0,
+                "latest": {},
+                "has_data": False
+            }
+
+        avg_ttft = (sum(ttft_list) / len(ttft_list)) if ttft_list else 0.0
+        avg_speed = (cum_c / cum_cand_time) if cum_cand_time > 0 else 0.0
+        cum_billed = cum_p + cum_c
+        # Gemini 3.8 Flash 体验优惠价: 输入 $0.75/M, 输出 $3.75/M, 缓存 $0.15/M
+        cum_cost = (cum_p * 0.75 + cum_c * 3.75 + cum_ca * 0.15) / 1e6
+
+        return {
+            "promptTokens": cum_p,
+            "candidateTokens": cum_c,
+            "cachedTokens": cum_ca,
+            "thinkingTokens": cum_th,
+            "billedTokens": cum_billed,
+            "costUsd": round(cum_cost, 4),
+            "avgTtft": round(avg_ttft, 2),
+            "avgSpeed": round(avg_speed, 1),
+            "latest": latest,
+            "has_data": bool(rows)
+        }
+
+    def _get_cluster_stats(self, primary_conv_id: str) -> dict:
+        """聚合由 primary_conv_id 派生的所有子智能体的 Token、费用与状态"""
+        subagents = self._discover_subagents(primary_conv_id)
+        if not subagents:
+            return {
+                "totalTokens": 0,
+                "totalCostUsd": 0.0,
+                "combinedCostUsd": 0.0,
+                "runningCount": 0,
+                "doneCount": 0,
+                "activeCount": 0,
+                "completedCount": 0,
+                "subagents": []
+            }
+
+        cluster_tokens = 0
+        cluster_cost = 0.0
+        running_cnt = 0
+        done_cnt = 0
+        sub_list = []
+
+        for s in subagents:
+            cid = s["id"]
+            m = self._extract_session_metrics(cid)
+            state = s.get("state", "running")
+            if state == "running":
+                running_cnt += 1
+            else:
+                done_cnt += 1
+
+            total_tok = m["billedTokens"]
+            cost = m["costUsd"]
+            cluster_tokens += total_tok
+            cluster_cost += cost
+
+            speed = m["avgSpeed"]
+            if speed == 0.0 and m.get("latest"):
+                lat = m["latest"]
+                dur = lat.get("ttft", 0.0) + lat.get("streaming_duration", 0.0)
+                if dur > 0:
+                    speed = round(lat.get("candidates", 0) / dur, 1)
+
+            ttft = m["avgTtft"]
+            if ttft == 0.0 and m.get("latest"):
+                ttft = round(m["latest"].get("ttft", 0.0), 2)
+
+            sub_list.append({
+                "id": cid,
+                "role": s.get("role") or "Subagent",
+                "type": s.get("type") or "subagent",
+                "state": state,
+                "totalTokens": total_tok,
+                "costUsd": round(cost, 3),
+                "promptTokens": m["promptTokens"],
+                "candidateTokens": m["candidateTokens"],
+                "thinkingTokens": m["thinkingTokens"],
+                "cachedTokens": m["cachedTokens"],
+                "ttft": ttft,
+                "speed": speed,
+                "lastAction": s.get("lastAction") or ("执行中..." if state == "running" else "已完成任务")
+            })
+
+        return {
+            "totalTokens": cluster_tokens,
+            "totalCostUsd": round(cluster_cost, 3),
+            "combinedCostUsd": 0.0,
+            "runningCount": running_cnt,
+            "doneCount": done_cnt,
+            "activeCount": running_cnt,
+            "completedCount": done_cnt,
+            "subagents": sub_list
+        }
 
     def get_convo_stats(self, conv_id: str, fallback_data=None) -> dict:
         """从对应会话的 SQLite 提取包含总输入、总输出、思考 Token 及 5 大分段的完整指标"""
@@ -273,6 +612,10 @@ class DataEngine(QObject):
         # 计算 5 大模块分解 (系统提示词、工具定义、对话消息、MCP、技能)
         breakdown = self.calculate_context_breakdown(active_context)
 
+        # 计算派生的子智能体集群用量
+        cluster = self._get_cluster_stats(conv_id)
+        cluster["combinedCostUsd"] = round(cum_cost + cluster["totalCostUsd"], 3)
+
         return {
             "conversationId": conv_id,
             "title": self.titles_cache.get(conv_id, ""),
@@ -299,7 +642,8 @@ class DataEngine(QObject):
                 "costUsd": round(cum_cost, 3),
                 "avgTtft": round(avg_ttft, 2),
                 "avgSpeed": round(avg_speed, 1)
-            }
+            },
+            "cluster": cluster
         }
 
     def calculate_context_breakdown(self, total_ctx: int) -> dict:
