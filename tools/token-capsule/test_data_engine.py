@@ -321,3 +321,67 @@ def test_subagents_pending_queue_desync_protection(mock_antigravity_env):
     # Even if sub1_id appeared twice in content, queue is drained appropriately
     assert s2["role"] in ("Role Two", "Subagent")
 
+def test_ignore_command_output_and_message_completion(mock_antigravity_env):
+    """Tests that command stdout noise is ignored and subagent completion via message is recognized."""
+    env = mock_antigravity_env
+    engine = DataEngine()
+    engine.conv_dir = env["conv_dir"]
+    engine.brain_dir = env["brain_dir"]
+
+    primary_id = "primary-real-001"
+    sub_real_id = "sub-real-001"
+    fake_id = "fake-template-id"
+
+    # Create dummy brain folder for real subagent so it passes validation
+    os.makedirs(os.path.join(env["brain_dir"], sub_real_id), exist_ok=True)
+
+    logs_dir = os.path.join(env["brain_dir"], primary_id, ".system_generated", "logs")
+    os.makedirs(logs_dir, exist_ok=True)
+    transcript_file = os.path.join(logs_dir, "transcript.jsonl")
+
+    lines = [
+        # Terminal command output containing fake subagent string (like grep results)
+        json.dumps({
+            "step_index": 1,
+            "source": "MODEL",
+            "type": "GENERIC",
+            "content": 'The command exited with code 0.\nOutput:\nFound line with sub:\nCreated the following subagents:\n"conversationId": "{sub1_id}"'
+        }),
+        # Real invoke_subagent call
+        json.dumps({
+            "step_index": 2,
+            "source": "MODEL",
+            "type": "PLANNER_RESPONSE",
+            "tool_calls": [{
+                "name": "invoke_subagent",
+                "args": {
+                    "Subagents": json.dumps([{"Role": "Deep Reviewer", "TypeName": "research"}])
+                }
+            }]
+        }),
+        # Real creation result
+        json.dumps({
+            "step_index": 3,
+            "source": "MODEL",
+            "type": "GENERIC",
+            "content": f'Created At: 2026-09-04T12:00:00Z\nCompleted At: 2026-09-04T12:00:00Z\nCreated the following subagents:\n{{\n  "conversationId": "{sub_real_id}"\n}}\nThe subagents will send you a message when they have completed their task.'
+        }),
+        # Subagent message delivery to parent
+        json.dumps({
+            "step_index": 4,
+            "source": "SYSTEM",
+            "type": "SYSTEM_MESSAGE",
+            "content": f'<SYSTEM_MESSAGE>\n[Message] sender={sub_real_id} priority=MESSAGE_PRIORITY_HIGH content=Review is done!'
+        })
+    ]
+    with open(transcript_file, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+
+    subs = engine._discover_subagents(primary_id)
+    # Must NOT discover fake {sub1_id}
+    assert len(subs) == 1
+    assert subs[0]["id"] == sub_real_id
+    assert subs[0]["role"] == "Deep Reviewer"
+    assert subs[0]["state"] == "done"
+    assert "已完成" in subs[0]["lastAction"]
+
