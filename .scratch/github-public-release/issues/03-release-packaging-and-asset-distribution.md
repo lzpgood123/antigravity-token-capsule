@@ -4,9 +4,9 @@
 
 **Blocked by:** 02: GitHub Repository Creation and Source Push
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Git tag `v1.0.0` created and pushed to GitHub remote.
-- [ ] GitHub Release `v1.0.0` published with release notes outlining v1.0.0 features and usage.
-- [ ] Standalone executable `token-capsule.exe` (from `tools/token-capsule/dist/onefile/token-capsule.exe`) attached to the Release.
-- [ ] Release assets verified via GitHub API to ensure download URL is active and functional.
+- [x] Git tag `v1.0.0` created and pushed to GitHub remote.
+- [x] GitHub Release `v1.0.0` published with release notes outlining v1.0.0 features and usage.
+- [x] Standalone executable `token-capsule.exe` (from `tools/token-capsule/dist/onefile/token-capsule.exe`) attached to the Release.
+- [x] Release assets verified via GitHub API to ensure download URL is active and functional.
