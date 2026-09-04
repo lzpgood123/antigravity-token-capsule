@@ -48,13 +48,22 @@ When developing with **Google Antigravity**, developers frequently encounter the
   Ships with a pure-Python Protobuf parser that directly decodes `gen_metadata` blobs from SQLite WAL logs without external dependencies:
   * **TTFT (Time To First Token)**: Millisecond-level first-token response latency
   * **Speed (tok/s)**: Streaming generation throughput (both current turn and historical weighted average)
-* 💰 **Turn & Cumulative Cost Metering**  
-  Tracks prompt tokens, candidate tokens, Prompt Cache hits, and deep thinking tokens in real time, calculating actual dollar costs and cache hit savings.
+* 🤖 **Subagent Cluster Telemetry & Recursive Tree Hierarchy**  
+  * Automatically sniffs `transcript.jsonl` to extract child Subagents with their semantic role names and live status (`running` / `completed`).
+  * Industry-first support for **L1 ➔ L2 ➔ L3 multi-level recursive tree cascades** (e.g., Teamwork Lead ➔ Project Orchestrator ➔ Workers).
+  * Node-level independent billing plus automatic descendant rollup (e.g., `Derived 16 subtasks (6.78M · $17.701)`).
+  * Persistent accordion state memory across polling cycles—zero jitter, no involuntary collapse, and complete isolation from stale historical sessions.
+* 📐 **Hybrid Dual-Layout Modes**  
+  * **Compact Tabbed Mode (320px)**: Top segmented tabs to switch seamlessly between `[💬 Primary Session]` and `[🤖 Subagents · N]` with smooth collapsible accordion cards for distraction-free coding.
+  * **Dual-Wing Radar Mode (680px)**: Side-by-side panoramic split view displaying the primary session card on the left and full-scale subagent cluster radar on the right, complete with a global combined billing bar.
+* 💰 **Turn & Cumulative Cost Metering with Dual-Billing Linkage**  
+  * Decoupled physical context and financial accounting: Primary 256k progress bar strictly tracks active window capacity, while the footer displays `Total Cost: $X.XXX (incl. Subagents: $Y.YYY)`.
+  * Real-time tracking of uncached prompt, generated candidates, Prompt Cache hits, and deep thinking tokens with live dollar conversions.
 * 🎨 **5 Beautiful Built-in Themes & Modern Desktop UX**  
   * Ultra-compact frameless pill shape with smooth mouse dragging and one-click card expansion.
   * **5 live-switchable themes**: Pure Light, Obsidian Dark, Frosted Aurora, Matrix Neon, and Warm Paper (persisted across restarts).
   * **Session Quick Switching**: Dropdown menu to inspect recent conversations or lock onto Auto-Follow.
-  * **System Tray Ecosystem**: Right-click tray icon to toggle Windows startup (HKCU registry), keep window always-on-top, reset position to the top-right corner, or exit cleanly.
+  * **Comprehensive System Tray & Context Menu**: Right-click to switch **「📐 Layout Mode」** (Compact Tab / Dual-Wing Radar), cycle **「🎨 Themes」**, toggle Windows startup (HKCU registry), keep window always-on-top, reset position to the top-right corner, or exit cleanly.
 * 📦 **Standalone Windows Executable**  
   Ships as a pre-compiled standalone binary (`token-capsule.exe`). No Python runtime or package installation required.
 
@@ -70,21 +79,33 @@ When developing with **Google Antigravity**, developers frequently encounter the
       <sub><b>Ultra-Compact Floating Pill</b><br />Frameless, translucent floating widget docked unobtrusively in your workspace. Drag anywhere with zero clutter while tracking active session tokens and streaming throughput.</sub>
     </td>
     <td width="50%" align="center" valign="top">
-      <img src="docs/images/03-telemetry-card.png" alt="5-Segment Telemetry & Cost Breakdown Card" width="100%" />
-      <br />
-      <sub><b>5-Segment Telemetry & Cost Breakdown Card</b><br />Click to expand in-depth telemetry: exact breakdown across System, Tools, Messages, MCP, and Skills, alongside TTFT latency, streaming tok/s, and real-time dollar cost metering.</sub>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" align="center" valign="top">
       <img src="docs/images/04-in-situ-expanded.png" alt="In-Situ Antigravity Workspace Integration" width="100%" />
       <br />
       <sub><b>In-Situ Antigravity Workspace Integration</b><br />Seamless companion experience floating alongside active agent workflows, locked to your foreground conversation via CDP without session jumping.</sub>
     </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <img src="docs/images/03-telemetry-card.png" alt="Compact Tab - Primary Session Telemetry & Dual Billing" width="100%" />
+      <br />
+      <sub><b>Compact Tab · Primary Session Telemetry (5-Segment Breakdown)</b><br />Segmented tab bar navigation detailing System / Tools / Messages / MCP / Skills breakdown, TTFT latency, streaming tok/s, and <b>linked dual-billing rollups</b> (including Subagent expenditures).</sub>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <img src="docs/images/06-subagent-accordion-tab.png" alt="Compact Tab - Subagents Cluster Accordion" width="100%" />
+      <br />
+      <sub><b>Compact Tab · Subagents Cluster Accordion</b><br />Switch to the <code>[🤖 Subagents · N]</code> tab for a cluster summary header, active/completed status indicators, and smooth multi-level collapsible task detail cards.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <img src="docs/images/07-dual-wing-radar.png" alt="Dual-Wing Radar Mode & Multi-Level Recursive Tree" width="100%" />
+      <br />
+      <sub><b>Dual-Wing Radar Mode · Multi-Level Recursive Tree</b><br />680px panoramic side-by-side layout displaying L1 ➔ L2 ➔ L3 recursive task hierarchy, expandable child tasks with rollup cost rollups, combined global billing, and instant tray switching.</sub>
+    </td>
     <td width="50%" align="center" valign="top">
       <img src="docs/images/05-tray-menu-themes.png" alt="System Tray Menu & 5-Theme Switcher" width="100%" />
       <br />
-      <sub><b>System Tray Menu & 5-Theme Switcher</b><br />Hot-switch instantly across 5 curated themes (Pure Light, Obsidian Dark, Frosted Aurora, Matrix Neon, Warm Paper) with startup toggle, window pinning, and quick position reset.</sub>
+      <sub><b>System Tray Menu · 5 Themes & Layout Switcher</b><br />Instant hot-switching across 5 curated themes (Pure Light, Obsidian Dark, Frosted Aurora, Matrix Neon, Warm Paper), layout mode toggle (Single / Dual-Wing), autostart, window pinning, and position reset.</sub>
     </td>
   </tr>
 </table>
@@ -94,14 +115,31 @@ When developing with **Google Antigravity**, developers frequently encounter the
 ## 🏛️ Architecture & Workflow
 
 ```mermaid
-flowchart LR
-    A[Antigravity Process] -->|Writes Debug Port| B[DevToolsActivePort]
-    B -->|HTTP /json Probe| C[CDP Sniffer]
-    C -->|Extracts Foreground UUID| D[Active Session]
-    D -->|300ms Read-Only Polling| E[SQLite .db & .db-wal]
-    E -->|Extracts gen_metadata Blob| F[Pure-Python Proto Decoder]
-    F -->|Computes 5 Segments / TTFT / tok/s| G[Data Engine]
-    G -->|Qt Signal/Slot| H[PySide6 Floating Capsule]
+flowchart TD
+    subgraph AntigravityIDE["Google Antigravity IDE"]
+        A[Antigravity Process] -->|Writes Debug Port| B[DevToolsActivePort]
+        C[Active Session Trace] -->|Appends Log| D[transcript.jsonl]
+    end
+
+    subgraph Engine["Data Sniffer & Aggregation Engine"]
+        B -->|HTTP /json Probe| E[CDP Sniffer]
+        E -->|Extracts Foreground UUID| F[Active Session Lock]
+        D -->|Extracts Subagent Graph| G[Recursive Subagent Sniffer]
+        F -->|300ms Read-Only Polling| H[Primary SQLite & WAL]
+        G -->|Incremental mtime Pool| I[Subagent SQLites & WALs]
+        H -->|Reads gen_metadata Blob| J[Pure-Python Proto Decoder]
+        I -->|Reads gen_metadata Blob| J
+        J -->|5 Segments / TTFT / tok/s| K[Primary Session Metrics]
+        J -->|Tree Rollup / Status| L[Cluster Cascade Metrics]
+        K & L -->|Linked Combined Billing| M[Dual-Billing Aggregator]
+    end
+
+    subgraph UI["PySide6 Companion Capsule"]
+        M -->|Qt Signal/Slot| N{Layout Mode}
+        N -->|Compact Tab 320px| O[Compact Tab: Primary / Subagents Accordion]
+        N -->|Dual-Wing Radar 680px| P[Dual-Wing Radar: Primary Card + Full-Scale Radar]
+        Q[System Tray / Context Menu] -->|Switch Layout & 5 Themes| N
+    end
 ```
 
 ---

@@ -48,13 +48,22 @@
   内置纯 Python 原生实现的无依赖 Protobuf 解码器，直接从 SQLite WAL 日志中提取 `gen_metadata` 二进制数据块，精确计算：
   * **TTFT (Time To First Token)**：首字响应延迟（毫秒级）
   * **Speed (tok/s)**：流式生成吞吐速率（当轮速度与全会话历史加权均值）
-* 💰 **财务计费估算 (Cost & Cache Metering)**  
-  实时统计未缓存 Prompt、生成 Candidate、Prompt Cache 缓存命中量及深度思考（Thinking）Token，换算美元开销并计算缓存命中收益率。
+* 🤖 **Subagent 智能体集群监控与多层级树形级联 (Subagent Cluster & Recursive Tree Hierarchy)**  
+  * 自动监听主会话 `transcript.jsonl`，毫秒级提取所有派生子智能体（Subagents）及其业务角色与运行状态（运行中/已完成）。
+  * 业界率先支持 **L1 ➔ L2 ➔ L3 多层级嵌套树形级联展示**（如 Teamwork Lead ➔ Project Orchestrator ➔ Workers）。
+  * 节点自身计费独立核算，派生子任务自动级联汇总（如 `派生 16 个子任务 (6.78M · $17.701)`）。
+  * 手风琴卡片状态智能记忆防抖，轮询重绘不回弹、不抖动，彻底消除历史日志干扰。
+* 📐 **混合双布局体系 (Hybrid Dual-Layout Modes)**  
+  * **紧凑单卡模式 (Compact Tabbed Mode, 320px)**：顶部分段 Tab 丝滑切换「💬 主会话」与「🤖 Subagents · N」，支持手风琴平滑折叠展开，适合日常专注编码。
+  * **旁置双翼模式 (Dual-Wing Radar Mode, 680px)**：左右双屏并列展示主会话物理卡片与集群实时雷达，一屏尽览多 Agent 协同，底部配备全局联合账单条。
+* 💰 **财务计费估算与双计费联动 (Cost & Dual-Billing Linkage)**  
+  * 物理上下文与财务口径解耦：主会话进度条严格反映 256k 物理窗口，底部同步展示 `累计折算费用: $X.XXX (含 Subagents: $Y.YYY)`。
+  * 实时统计未缓存 Prompt、生成 Candidate、Prompt Cache 命中量及深度思考（Thinking）Token，换算美元开销并计算缓存收益。
 * 🎨 **5 套主题风格与桌面极简交互**  
   * 优雅的无边框半透明微型胶囊（药丸）造型，鼠标随心拖拽，点击一键展开/折叠详细卡片。
   * **5 套精美主题实时热切**：极简明亮、深邃暗夜、磨砂极光、赛博黑客、暖阳纸墨，自动持久化记忆。
   * **会话快速切换**：支持下拉历史会话快速复盘，或一键开启“自动跟随”。
-  * **完善的系统托盘**：右键托盘支持开机自启（注册表托管）、窗口总在最前、位置重置（右上角）与安全退出。
+  * **完善的系统托盘与右键菜单**：右键支持 **「📐 布局模式」**（单卡/双翼切换）、**「🎨 主题风格」**、开机自启（注册表托管）、窗口总在最前、位置重置（右上角）与安全退出。
 * 📦 **免 Python 环境独立运行**  
   已预编译为独立单文件可执行文件（`token-capsule.exe`），无需安装 Python 或任何依赖，即拷即用。
 
@@ -70,21 +79,33 @@
       <sub><b>极简悬浮药丸形态 (Compact Floating Pill)</b><br />无边框半透明胶囊设计，沉浸式贴附在 IDE 右上角，随心拖拽，零视觉干扰实时呈现当前 Token 概览与当轮生成速率。</sub>
     </td>
     <td width="50%" align="center" valign="top">
-      <img src="docs/images/03-telemetry-card.png" alt="五维遥测与财务明细卡片" width="100%" />
-      <br />
-      <sub><b>五维遥测与财务明细卡片 (Telemetry & Cost Card)</b><br />单击展开详细透视看板：System / Tools / Messages / MCP / Skills 5 分段精准拆解、TTFT 首字延迟、当轮与加权均值 tok/s 及实时美元成本换算。</sub>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" align="center" valign="top">
       <img src="docs/images/04-in-situ-expanded.png" alt="IDE 工作区原位协同" width="100%" />
       <br />
       <sub><b>IDE 工作区原位协同 (In-Situ Workspace Workflow)</b><br />与 Google Antigravity 界面无缝伴生融合，通过 CDP 协议独占锁定前台活跃会话，无论后台有多少 Agent 并发均不跳变。</sub>
     </td>
+  </tr>
+  <tr>
     <td width="50%" align="center" valign="top">
-      <img src="docs/images/05-tray-menu-themes.png" alt="系统托盘与 5 套主题热切" width="100%" />
+      <img src="docs/images/03-telemetry-card.png" alt="紧凑单卡 - 主会话五维透视与双计费" width="100%" />
       <br />
-      <sub><b>系统托盘与 5 套主题热切 (System Tray & 5-Theme Switcher)</b><br />纯亮、暗夜、极光、黑客、暖阳 5 大精美主题实时无缝热切，右键托盘支持开机自启、窗口置顶、位置重置与优雅退出。</sub>
+      <sub><b>紧凑单卡 · 主会话五维透视 (Compact Tab: Primary Session)</b><br />顶部 Tab 栏切换，展示 System / Tools / Messages / MCP / Skills 5 分段精准拆解、TTFT 首字延迟、当轮与加权 tok/s 速率及 <b>双计费联动折算</b>（含 Subagents 费用）。</sub>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <img src="docs/images/06-subagent-accordion-tab.png" alt="紧凑单卡 - Subagent 集群手风琴" width="100%" />
+      <br />
+      <sub><b>紧凑单卡 · Subagent 集群手风琴 (Compact Tab: Subagents Accordion)</b><br />切换至 <code>[🤖 Subagents · N]</code> 标签页，直观展示集群计费消耗大盘条、运行/完成状态指示灯，以及支持平滑折叠展开的多层级任务明细卡片。</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <img src="docs/images/07-dual-wing-radar.png" alt="旁置双翼模式与多层级递归雷达" width="100%" />
+      <br />
+      <sub><b>旁置双翼模式 · 多层级递归雷达 (Dual-Wing Radar & Multi-Level Tree)</b><br />680px 左右双翼全景并列，L1 ➔ L2 ➔ L3 多层级嵌套任务树形级联展示，支持派生任务收起/展开与向上汇总计费，底部全局联合账单结算，右键托盘一键无缝热切。</sub>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <img src="docs/images/05-tray-menu-themes.png" alt="系统托盘与 5 套主题/布局热切" width="100%" />
+      <br />
+      <sub><b>系统托盘 · 5 套主题与布局模式热切 (System Tray & Controls)</b><br />纯亮、暗夜、极光、黑客、暖阳 5 大精美主题即切即用，右键支持「📐 布局模式」（单卡/双翼）切换、开机自启、窗口置顶、位置重置与优雅退出。</sub>
     </td>
   </tr>
 </table>
@@ -94,14 +115,31 @@
 ## 🏛️ 系统工作原理
 
 ```mermaid
-flowchart LR
-    A[Antigravity 进程] -->|写入调试端口| B[DevToolsActivePort]
-    B -->|HTTP /json 探针| C[CDP 嗅探器]
-    C -->|提取前台聚焦会话 UUID| D[Active Session]
-    D -->|300ms 只读无锁轮询| E[SQLite .db & .db-wal]
-    E -->|读取 gen_metadata Blob| F[纯 Python Proto 解码器]
-    F -->|解析 5 大分段 / TTFT / tok/s| G[数据引擎]
-    G -->|Qt Signal/Slot| H[PySide6 桌面悬浮胶囊]
+flowchart TD
+    subgraph AntigravityIDE["Google Antigravity IDE"]
+        A[Antigravity 进程] -->|写入调试端口| B[DevToolsActivePort]
+        C[Active Session 轨迹] -->|追加日志| D[transcript.jsonl]
+    end
+
+    subgraph Engine["数据探针与聚合引擎 (Data Engine)"]
+        B -->|HTTP /json 探针| E[CDP 嗅探器]
+        E -->|提取前台聚焦会话 UUID| F[活跃会话锁定]
+        D -->|提取派生 Subagent 关系| G[递归 Subagent 发现器]
+        F -->|300ms 只读无锁轮询| H[主会话 SQLite & WAL]
+        G -->|增量 mtime 轮询池| I[各 Subagent SQLite & WAL]
+        H -->|读取 gen_metadata Blob| J[纯 Python Proto 解码器]
+        I -->|读取 gen_metadata Blob| J
+        J -->|5 分段 / TTFT / tok/s| K[主会话用量指标]
+        J -->|多级树形 Rollup / 状态| L[集群级联用量指标]
+        K & L -->|联合结算联动| M[双计费与聚合数据中心]
+    end
+
+    subgraph UI["PySide6 桌面伴生胶囊 (Capsule UI)"]
+        M -->|Qt Signal/Slot| N{布局模式}
+        N -->|紧凑单卡 320px| O[Compact Tab: 主会话 / Subagents 手风琴]
+        N -->|旁置双翼 680px| P[Dual-Wing Radar: 左翼主会话 + 右翼全景雷达]
+        Q[系统托盘 / 右键菜单] -->|切换布局 & 5 套主题| N
+    end
 ```
 
 ---
