@@ -204,3 +204,45 @@ def test_theme_compatibility(window):
     for theme_name in THEME_CONFIGS.keys():
         window.set_theme(theme_name, save=False)
         assert window.get_current_theme() == theme_name
+
+def test_toggle_mode_width_constraints(window):
+    """Tests that collapsing to pill releases width constraints and expanding restores them."""
+    assert window.is_expanded is True
+    assert window.card_frame.isVisible() is True
+    assert window.pill_frame.isVisible() is False
+
+    # Collapse to pill
+    window.toggle_mode()
+    assert window.is_expanded is False
+    assert window.card_frame.isVisible() is False
+    assert window.pill_frame.isVisible() is True
+    assert window.minimumWidth() == 0
+    assert window.maximumWidth() == 16777215
+
+    # Expand back to card in compact mode
+    window.toggle_mode()
+    assert window.is_expanded is True
+    assert window.card_frame.isVisible() is True
+    assert window.width() == 320
+
+    # Expand back to card in dual_wing mode
+    window.set_layout_mode("dual_wing")
+    assert window.width() == 680
+    window.toggle_mode()
+    assert window.minimumWidth() == 0
+    window.toggle_mode()
+    assert window.width() == 680
+
+def test_cluster_tab_and_pill_indicator_behaviors(window):
+    """Tests cluster tab disabled state and pill active indicator."""
+    # 1. Without subagents: cluster tab disabled, pill info has no robot icon
+    data_no_sub = make_sample_data(with_subagents=False)
+    window.update_data(data_no_sub)
+    assert window.btn_tab_cluster.isEnabled() is False
+    assert "🤖" not in window.pill_info.text()
+
+    # 2. With running subagents: cluster tab enabled, pill info shows robot indicator
+    data_with_sub = make_sample_data(with_subagents=True)
+    window.update_data(data_with_sub)
+    assert window.btn_tab_cluster.isEnabled() is True
+    assert "🤖1" in window.pill_info.text()

@@ -339,8 +339,8 @@ class DataEngine(QObject):
                     if "Created the following subagents:" in content:
                         cids = re.findall(r'"conversationId":\s*"([^"]+)"', content)
                         for cid in cids:
+                            info = pending_subagents.pop(0) if pending_subagents else {"role": "Subagent", "type": "subagent"}
                             if cid not in self.discovered_subagents:
-                                info = pending_subagents.pop(0) if pending_subagents else {"role": "Subagent", "type": "subagent"}
                                 self.discovered_subagents[cid] = {
                                     "id": cid,
                                     "role": info["role"],
@@ -546,48 +546,13 @@ class DataEngine(QObject):
 
     def get_convo_stats(self, conv_id: str, fallback_data=None) -> dict:
         """从对应会话的 SQLite 提取包含总输入、总输出、思考 Token 及 5 大分段的完整指标"""
-        db_path = os.path.join(self.conv_dir, f"{conv_id}.db")
-        if not os.path.exists(db_path) or not extract_usage_from_blob:
+        metrics = self._extract_session_metrics(conv_id)
+        if not metrics.get("has_data"):
             if fallback_data:
                 return fallback_data
             return {}
 
-        clean_path = db_path.replace("\\", "/")
-        cum_p, cum_c, cum_ca, cum_th = 0, 0, 0, 0
-        ttft_list = []
-        cum_cand_time = 0.0
-        latest = {}
-
-        try:
-            conn = sqlite3.connect(f"file:{clean_path}?mode=ro", uri=True, timeout=0.8)
-            c = conn.cursor()
-            c.execute("SELECT idx, data FROM gen_metadata ORDER BY idx ASC")
-            rows = c.fetchall()
-            conn.close()
-
-            for idx, blob in rows:
-                u = extract_usage_from_blob(blob)
-                if u:
-                    cand = u.get("candidates", 0)
-                    ttft = u.get("ttft", 0.0)
-                    sdur = u.get("streaming_duration", 0.0)
-
-                    cum_p += u.get("prompt", 0)
-                    cum_c += cand
-                    cum_ca += u.get("cached", 0)
-                    cum_th += u.get("thinking", 0)
-
-                    if ttft > 0:
-                        ttft_list.append(ttft)
-                    tot_dur = ttft + sdur
-                    if tot_dur > 0 and cand > 0:
-                        cum_cand_time += tot_dur
-
-                    latest = u
-        except Exception:
-            if fallback_data:
-                return fallback_data
-
+        latest = metrics.get("latest", {})
         turn_p = latest.get("prompt", 0)
         turn_c = latest.get("candidates", 0)
         turn_ca = latest.get("cached", 0)
@@ -597,14 +562,16 @@ class DataEngine(QObject):
         turn_tot_time = turn_ttft + turn_sdur
         turn_speed = (turn_c / turn_tot_time) if turn_tot_time > 0 else 0.0
 
-        avg_ttft = (sum(ttft_list) / len(ttft_list)) if ttft_list else 0.0
-        avg_speed = (cum_c / cum_cand_time) if cum_cand_time > 0 else 0.0
-
-        cum_billed = cum_p + cum_c
+        cum_p = metrics["promptTokens"]
+        cum_c = metrics["candidateTokens"]
+        cum_ca = metrics["cachedTokens"]
+        cum_th = metrics["thinkingTokens"]
+        cum_billed = metrics["billedTokens"]
         cum_in = cum_p + cum_ca
         cum_ratio = (cum_ca / cum_in * 100) if cum_in > 0 else 0.0
-        # Gemini 3.8 Flash 体验优惠价: 输入 $0.75, 输出 $3.75, 缓存 $0.15
-        cum_cost = (cum_p * 0.75 + cum_c * 3.75 + cum_ca * 0.15) / 1e6
+        cum_cost = metrics["costUsd"]
+        avg_ttft = metrics["avgTtft"]
+        avg_speed = metrics["avgSpeed"]
 
         # 当前活跃上下文 = 本次未缓存输入 + 本次缓存输入
         active_context = turn_p + turn_ca
