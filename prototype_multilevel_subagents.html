@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Antigravity Token Capsule · 多层级 Subagent 原型设计</title>
+  <style>
+    :root {
+      /* 暖阳纸墨 (默认与截图一致) */
+      --card-bg: #faf7f2;
+      --pill-bg: #faf7f2;
+      --border: #e7dfd5;
+      --text-main: #292524;
+      --text-sub: #78716c;
+      --item-label: #44403c;
+      --item-val: #78716c;
+      --accent: #b45309;
+      --accent-light: #fef3c7;
+      --hover-bg: #eee5d8;
+      --combo-bg: #f5efe6;
+      --cost-color: #d97706;
+      --bar-bg: #eee5d8;
+      --sep-bg: #e7dfd5;
+      --badge-bg: #f5efe6;
+      --shadow: 0 12px 36px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    [data-theme="light"] {
+      --card-bg: #ffffff;
+      --pill-bg: #ffffff;
+      --border: #e2e8f0;
+      --text-main: #0f172a;
+      --text-sub: #64748b;
+      --item-label: #475569;
+      --item-val: #64748b;
+      --accent: #2563eb;
+      --accent-light: #eff6ff;
+      --hover-bg: #f1f5f9;
+      --combo-bg: #f8fafc;
+      --cost-color: #d97706;
+      --bar-bg: #f1f5f9;
+      --sep-bg: #e2e8f0;
+      --badge-bg: #f8fafc;
+      --shadow: 0 12px 36px rgba(15,23,42,0.08);
+    }
+
+    [data-theme="dark"] {
+      --card-bg: #1e1e2e;
+      --pill-bg: #1e1e2e;
+      --border: #313244;
+      --text-main: #cdd6f4;
+      --text-sub: #a6adc8;
+      --item-label: #bac2de;
+      --item-val: #a6adc8;
+      --accent: #89b4fa;
+      --accent-light: #181825;
+      --hover-bg: #313244;
+      --combo-bg: #181825;
+      --cost-color: #fab387;
+      --bar-bg: #313244;
+      --sep-bg: #313244;
+      --badge-bg: #181825;
+      --shadow: 0 14px 40px rgba(0,0,0,0.4);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'SF Pro Text', Roboto, sans-serif;
+      background: #e5e7eb;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px 20px 120px 20px;
+      color: var(--text-main);
+      transition: background-color 0.2s ease;
+    }
+
+    /* 顶部控制栏 */
+    .header-bar {
+      width: 100%;
+      max-width: 900px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      background: #ffffff;
+      padding: 12px 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .header-title {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .header-title h1 { font-size: 16px; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 8px; }
+    .header-title p { font-size: 12px; color: #64748b; }
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .btn-toggle {
+      border: 1px solid #cbd5e1;
+      background: #f8fafc;
+      color: #334155;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-toggle:hover { background: #e2e8f0; }
+    .btn-toggle.active { background: #2563eb; color: #ffffff; border-color: #2563eb; }
+
+    /* 模拟主浮窗容器 */
+    .capsule-wrapper {
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      width: 320px; /* 默认紧凑模式 */
+      margin: 0 auto;
+    }
+    .capsule-wrapper.dual-wing {
+      width: 680px;
+    }
+
+    .card-root {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px 14px 14px 14px;
+      box-shadow: var(--shadow);
+      position: relative;
+    }
+
+    /* 标题栏与药丸下拉框 */
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      gap: 8px;
+    }
+    .title-label {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-main);
+      white-space: nowrap;
+    }
+    .conv-picker {
+      flex: 1;
+      background-color: var(--combo-bg);
+      color: var(--accent);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .close-btn {
+      color: var(--text-sub);
+      font-size: 14px;
+      font-weight: bold;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    /* 分段 Tab 切换 */
+    .tab-bar {
+      display: flex;
+      background-color: var(--combo-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 2px;
+      margin-bottom: 10px;
+      gap: 2px;
+    }
+    .tab-btn {
+      flex: 1;
+      border: none;
+      background: transparent;
+      color: var(--text-sub);
+      padding: 5px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+    }
+    .tab-btn.active {
+      background-color: var(--card-bg);
+      color: var(--text-main);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    /* 微仪表盘大盘条 */
+    .micro-dashboard {
+      background-color: var(--combo-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 7px 10px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .micro-title { font-size: 9px; color: var(--text-sub); font-weight: 700; margin-bottom: 2px; }
+    .micro-metric { font-size: 11px; font-weight: 800; color: var(--text-main); }
+    .micro-pill {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 12px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+    }
+
+    /* 方案内容区 */
+    .variant-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 480px;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+
+    /* 滚动条美化 */
+    .variant-container::-webkit-scrollbar { width: 5px; }
+    .variant-container::-webkit-scrollbar-track { background: transparent; }
+    .variant-container::-webkit-scrollbar-thumb { background: var(--sep-bg); border-radius: 3px; }
+    .variant-container::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+    /* 通用 Subagent 卡片样式 */
+    .subagent-card {
+      background-color: var(--combo-bg);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 8px 10px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      position: relative;
+    }
+    .subagent-card:hover {
+      border-color: var(--accent);
+      background-color: var(--hover-bg);
+    }
+    .card-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .status-dot.running { background-color: #10b981; box-shadow: 0 0 6px #10b981; }
+    .status-dot.done { background-color: #94a3b8; }
+
+    .card-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .card-role {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .card-sub {
+      font-size: 9px;
+      color: var(--text-sub);
+      margin-top: 1px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .card-right-metric {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .card-tok { font-size: 11px; font-weight: 700; color: var(--text-main); }
+    .card-cost { font-size: 10px; font-weight: 700; color: var(--cost-color); }
+    .card-chevron { font-size: 9px; color: var(--text-sub); transition: transform 0.2s; }
+    .card-chevron.expanded { transform: rotate(180deg); }
+
+    /* 手风琴详细指标网格 */
+    .detail-frame {
+      display: none;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+      font-size: 10px;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .detail-frame.open { display: flex; }
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      color: var(--text-sub);
+    }
+    .detail-row span.val {
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    /* ========================================================= */
+    /* 方案 A: 树形嵌套展开流 (Hierarchical Tree & Nested Branch) */
+    /* ========================================================= */
+    .tree-branch-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 4px;
+      padding-top: 4px;
+      border-top: 1px dashed var(--border);
+      font-size: 10px;
+    }
+    .branch-pill {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--accent);
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .btn-branch-toggle {
+      background: transparent;
+      border: none;
+      color: var(--accent);
+      font-size: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      padding: 2px 4px;
+      border-radius: 4px;
+    }
+    .btn-branch-toggle:hover {
+      background: var(--hover-bg);
+    }
+    .tree-children-container {
+      margin-top: 6px;
+      padding-left: 14px;
+      border-left: 2px solid var(--accent);
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+      animation: fadeIn 0.2s ease;
+    }
+    .tree-children-container.open { display: flex; }
+    .child-card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 6px 8px;
+    }
+    .child-card:hover { border-color: var(--accent); }
+
+    /* ========================================================= */
+    /* 方案 B: 扁平流 + 血统徽章与穿梭过滤 (Flat Rollup Stream) */
+    /* ========================================================= */
+    .filter-pills-bar {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 8px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+    .filter-chip {
+      background: var(--combo-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2px 8px;
+      font-size: 9px;
+      font-weight: 600;
+      color: var(--text-sub);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .filter-chip:hover { color: var(--text-main); }
+    .filter-chip.active {
+      background: var(--accent);
+      color: #ffffff;
+      border-color: var(--accent);
+    }
+    .tag-level {
+      font-size: 8.5px;
+      font-weight: 800;
+      padding: 1px 4px;
+      border-radius: 3px;
+      letter-spacing: 0.3px;
+    }
+    .tag-l1 { background: #dbeafe; color: #1e40af; }
+    .tag-l2 { background: #fef3c7; color: #92400e; }
+    .parent-link {
+      font-size: 8.5px;
+      color: var(--text-sub);
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    /* ========================================================= */
+    /* 方案 C: 双向钻取面包屑导航 (Drilldown Breadcrumbs)        */
+    /* ========================================================= */
+    .drilldown-view {
+      display: none;
+      animation: fadeIn 0.15s ease;
+    }
+    .drilldown-view.active { display: block; }
+    .breadcrumb-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 8px;
+      margin-bottom: 8px;
+    }
+    .btn-back {
+      background: transparent;
+      border: none;
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .breadcrumb-title {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-main);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 180px;
+    }
+    .branch-summary-banner {
+      background: var(--combo-bg);
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      padding: 6px 8px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--text-sub);
+    }
+    .branch-summary-banner strong { color: var(--text-main); }
+
+    /* 底部固定原型切换浮条 */
+    .proto-switcher-bar {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #0f172a;
+      color: #ffffff;
+      padding: 10px 18px;
+      border-radius: 30px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      z-index: 9999;
+      font-size: 13px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .proto-nav-btn {
+      background: #1e293b;
+      color: #ffffff;
+      border: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      transition: background 0.15s;
+    }
+    .proto-nav-btn:hover { background: #334155; }
+    .proto-label {
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .proto-badge {
+      background: #3b82f6;
+      color: #fff;
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 10px;
+      font-weight: 800;
+    }
+
+    /* 快捷切换键提示 */
+    .proto-hint {
+      font-size: 11px;
+      color: #94a3b8;
+      border-left: 1px solid #334155;
+      padding-left: 14px;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 顶部控制台 -->
+  <div class="header-bar">
+    <div class="header-title">
+      <h1>🚀 Token Capsule · 多层级 Subagent 视觉交互原型</h1>
+      <p>真实还原会话 <code>e2cf9cd6...</code> 的 3 个直属 L1 与 6 个派生 L2 真实消耗 ($2.658 / 1.38M Token)</p>
+    </div>
+    <div class="control-group">
+      <!-- 宽度切换 -->
+      <button class="btn-toggle active" id="btnWidthCompact" onclick="setWidth('compact')">📱 紧凑单卡 (320px)</button>
+      <button class="btn-toggle" id="btnWidthDual" onclick="setWidth('dual_wing')">🖥️ 展开双翼 (680px)</button>
+
+      <!-- 主题切换 -->
+      <button class="btn-toggle" onclick="cycleTheme()">🎨 切换主题 (<span id="themeName">暖阳纸墨</span>)</button>
+    </div>
+  </div>
+
+  <!-- 悬浮窗主体 -->
+  <div class="capsule-wrapper" id="capsuleWrapper">
+    <div class="card-root">
+      
+      <!-- 1. 窗口标题栏 -->
+      <div class="top-bar">
+        <div class="title-label">上下文用量</div>
+        <div class="conv-picker">
+          <span>🔄</span>
+          <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">e2cf9cd6 · 角色与审美深度研究</span>
+        </div>
+        <button class="close-btn">✕</button>
+      </div>
+
+      <!-- 2. 分段 Tab 切换 -->
+      <div class="tab-bar">
+        <button class="tab-btn">💬 主会话</button>
+        <button class="tab-btn active" id="tabClusterBtn">🤖 Subagents • 9</button>
+      </div>
+
+      <!-- 3. 微仪表盘汇总 (L1 + L2 全量汇算) -->
+      <div class="micro-dashboard">
+        <div>
+          <div class="micro-title">Subagent 集群总计费 (含嵌套派生)</div>
+          <div class="micro-metric" id="dashMetric">计费 1.38M · $2.658</div>
+        </div>
+        <div class="micro-pill">🟢 0 运行 · ⚪ 9 完成</div>
+      </div>
+
+      <!-- 4. 方案 A 容器: 树形缩进级联折叠 -->
+      <div id="viewVariantA" class="variant-container" style="display: flex;">
+        <!-- L1-1 -->
+        <div class="subagent-card" onclick="toggleAccordion('acc-a1', event)">
+          <div class="card-header-row">
+            <div class="status-dot done"></div>
+            <div class="card-info">
+              <div class="card-role">Character & Human Aesthetic Researcher</div>
+              <div class="card-sub">DeepInvestigator · 已完成</div>
+            </div>
+            <div class="card-right-metric">
+              <div class="card-tok">计费 92.9k</div>
+              <div class="card-cost">$0.150</div>
+              <div class="card-chevron" id="chev-acc-a1">▼</div>
+            </div>
+          </div>
+          <!-- 手风琴详情 -->
+          <div class="detail-frame" id="acc-a1">
+            <div class="detail-row"><span>直属计费总量 (入+出):</span><span class="val">92.9k ($0.150)</span></div>
+            <div class="detail-row"><span>输入 / 缓存命中:</span><span class="val">69.8k / 73.4k</span></div>
+            <div class="detail-row"><span>模型输出 / 思考:</span><span class="val">23.1k / 12.3k</span></div>
+            <div class="detail-row"><span>首字响应 / 速度:</span><span class="val">3.85s · 291t/s</span></div>
+          </div>
+          <!-- 树形派生子分支条 -->
+          <div class="tree-branch-header" onclick="event.stopPropagation()">
+            <span class="branch-pill">↳ 派生 2 个子任务 (326.2k · $0.774)</span>
+            <button class="btn-branch-toggle" onclick="toggleTree('tree-a1', this, event)">
+              <span class="btn-text">展开子任务</span> <span>▼</span>
+            </button>
+          </div>
+          <!-- 嵌套子任务卡片 -->
+          <div class="tree-children-container" id="tree-a1">
+            <div class="child-card" onclick="toggleAccordion('acc-a1-c1', event)">
+              <div class="card-header-row">
+                <div class="status-dot done"></div>
+                <div class="card-info">
+                  <div class="card-role" style="font-size:10px;">L2: Layer 0 Investigation Worker</div>
+                  <div class="card-sub">DeepInvestigatorWorker · 已完成</div>
+                </div>
+                <div class="card-right-metric">
+                  <div class="card-tok" style="font-size:10px;">计费 232.2k</div>
+                  <div class="card-cost" style="font-size:9.5px;">$0.613</div>
+                  <div class="card-chevron" id="chev-acc-a1-c1">▼</div>
+                </div>
+              </div>
+              <div class="detail-frame" id="acc-a1-c1">
+                <div class="detail-row"><span>计费总量 (入+出):</span><span class="val">232.2k ($0.613)</span></div>
+                <div class="detail-row"><span>输入 / 缓存命中:</span><span class="val">198.2k / 2.25M</span></div>
+                <div class="detail-row"><span>模型输出 / 思考:</span><span class="val">34.0k / 14.1k</span></div>
+                <div class="detail-row"><span>首字响应 / 速度:</span><span class="val">4.42s · 112t/s</span></div>
+              </div>
+            </div>
+
+            <div class="child-card" onclick="toggleAccordion('acc-a1-c2', event)">
+              <div class="card-header-row">
+                <div class="status-dot done"></div>
+                <div class="card-info">
+                  <div class="card-role" style="font-size:10px;">L2: Layer 0 Improvement Worker</div>
+                  <div class="card-sub">DeepInvestigatorWorker · 已完成</div>
+                </div>
+                <div class="card-right-metric">
+                  <div class="card-tok" style="font-size:10px;">计费 94.0k</div>
+                  <div class="card-cost" style="font-size:9.5px;">$0.161</div>
+                  <div class="card-chevron" id="chev-acc-a1-c2">▼</div>
+                </div>
+              </div>
+              <div class="detail-frame" id="acc-a1-c2">
+                <div class="detail-row"><span>计费总量 (入+出):</span><span class="val">94.0k ($0.161)</span></div>
+                <div class="detail-row"><span>输入 / 缓存命中:</span><span class="val">79.5k / 314.1k</span></div>
+                <div class="detail-row"><span>模型输出 / 思考:</span><span class="val">14.4k / 7.9k</span></div>
+                <div class="detail-row"><span>首字响应 / 速度:</span><span class="val">5.58s · 120t/s</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- L1-2 -->
+        <div class="subagent-card" onclick="toggleAccordion('acc-a2', event)">
+          <div class="card-header-row">
+            <div class="status-dot done"></div>
+            <div class="card-info">
+              <div class="card-role">Landscape & Scene Aesthetic Researcher</div>
+              <div class="card-sub">DeepInvestigator · 已完成</div>
+            </div>
+            <div class="card-right-metric">
+              <div class="card-tok">计费 98.2k</div>
+              <div class="card-cost">$0.134</div>
+              <div class="card-chevron" id="chev-acc-a2">▼</div>
+            </div>
+          </div>
+          <div class="detail-frame" id="acc-a2">
+            <div class="detail-row"><span>直属计费总量 (入+出):</span><span class="val">98.2k ($0.134)</span></div>
+            <div class="detail-row"><span>输入 / 缓存命中:</span><span class="val">81.3k / 61.2k</span></div>
+            <div class="detail-row"><span>模型输出 / 思考:</span><span class="val">16.9k / 2.5k</span></div>
+            <div class="detail-row"><span>首字响应 / 速度:</span><span class="val">3.00s · 327t/s</span></div>
+          </div>
+          <div class="tree-branch-header" onclick="event.stopPropagation()">
+            <span class="branch-pill">↳ 派生 2 个子任务 (259.2k · $0.416)</span>
+            <button class="btn-branch-toggle" onclick="toggleTree('tree-a2', this, event)">
+              <span class="btn-text">展开子任务</span> <span>▼</span>
+            </button>
+          </div>
+          <div class="tree-children-container" id="tree-a2">
+            <div class="child-card" onclick="toggleAccordion('acc-a2-c1', event)">
+              <div class="card-header-row">
+                <div class="status-dot done"></div>
+                <div class="card-info">
+                  <div class="card-role" style="font-size:10px;">L2: Layer 0 Scene Extraction</div>
+                  <div class="card-sub">DeepInvestigatorWorker · 已完成</div>
+                </div>
+                <div class="card-right-metric">
+                  <div class="card-tok" style="font-size:10px;">计费 105.8k</div>
+                  <div class="card-cost" style="font-size:9.5px;">$0.186</div>
+                  <div class="card-chevron" id="chev-acc-a2-c1">▼</div>
+                </div>
+              </div>
+              <div class="detail-frame" id="acc-a2-c1">
+                <div class="detail-row"><span>计费总量 (入+出):</span><span class="val">105.8k ($0.186)</span></div>
+                <div class="detail-row"><span>输入 / 缓存命中:</span><span class="val">93.9k / 472.9k</span></div>
+                <div class="detail-row"><span>模型输出 / 思考:</span><span class="val">11.8k / 5.5k</span></div>
+              </div>
+            </div>
+
+            <div class="child-card" onclick="toggleAccordion('acc-a2-c2', event)">
+              <div class="card-header-row">
+                <div class="status-dot done"></div>
+                <div class="card-info">
+                  <div class="card-role" style="font-size:10px;">L2: Layer 0 Composition Worker</div>
+                  <div class="card-sub">DeepInvestigatorWorker · 已完成</div>
+                </div>
+                <div class="card-right-metric">
+                  <div class="card-tok" style="font-size:10px;">计费 153.4k</div>
+                  <div class="card-cost" style="font-size:9.5px;">$0.230</div>
+                  <div class="card-chevron" id="chev-acc-a2-c2">▼</div>
+                </div>
+              </div>
+              <div class="detail-frame" id="acc-a2-c2">
+                <div class="detail-row"><span>计费总量 (入+出):</span><span class="val">153.4k ($0.230)</span></div>
+                <div class="detail-row"><span>输入 / 缓存命中:</span><span class="val">135.5k / 407.7k</span></div>
+                <div class="detail-row"><span>模型输出 / 思考:</span><span class="val">17.9k / 8.6k</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- L1-3 -->
+        <div class="subagent-card" onclick="toggleAccordion('acc-a3', event)">
+          <div class="card-header-row">
+            <div class="status-dot done"></div>
+            <div class="card-info">
+              <div class="card-role">Subagent (Synthesis & Grill)</div>
+              <div class="card-sub">DeepInvestigator · 已完成</div>
+            </div>
+            <div class="card-right-metric">
+              <div class="card-tok">计费 191.1k</div>
+              <div class="card-cost">$0.285</div>
+              <div class="card-chevron" id="chev-acc-a3">▼</div>
+            </div>
+          </div>
+          <div class="detail-frame" id="acc-a3">
+            <div class="detail-row"><span>直属计费总量 (入+出):</span><span class="val">191.1k ($0.285)</span></div>
+            <div class="detail-row"><span>输入 / 缓存命中:</span><span class="val">146.1k / 44.9k</span></div>
+            <div class="detail-row"><span>模型输出 / 思考:</span><span class="val">45.0k / 22.9k</span></div>
+          </div>
+          <div class="tree-branch-header" onclick="event.stopPropagation()">
+            <span class="branch-pill">↳ 派生 2 个子任务 (413.5k · $0.900)</span>
+            <button class="btn-branch-toggle" onclick="toggleTree('tree-a3', this, event)">
+              <span class="btn-text">展开子任务</span> <span>▼</span>
+            </button>
+          </div>
+          <div class="tree-children-container" id="tree-a3">
+            <div class="child-card" onclick="toggleAccordion('acc-a3-c1', event)">
+              <div class="card-header-row">
+                <div class="status-dot done"></div>
+                <div class="card-info">
+                  <div class="card-role" style="font-size:10px;">L2: Cross-Modal Cross-Check</div>
+                  <div class="card-sub">DeepInvestigatorWorker · 已完成</div>
+                </div>
+                <div class="card-right-metric">
+                  <div class="card-tok" style="font-size:10px;">计费 135.6k</div>
+                  <div class="card-cost" style="font-size:9.5px;">$0.235</div>
+                  <div class="card-chevron" id="chev-acc-a3-c1">▼</div>
+                </div>
+              </div>
+            </div>
+            <div class="child-card" onclick="toggleAccordion('acc-a3-c2', event)">
+              <div class="card-header-row">
+                <div class="status-dot done"></div>
+                <div class="card-info">
+                  <div class="card-role" style="font-size:10px;">L2: Grill Counter-Proposer</div>
+                  <div class="card-sub">DeepInvestigatorWorker · 已完成</div>
+                </div>
+                <div class="card-right-metric">
+                  <div class="card-tok" style="font-size:10px;">计费 277.8k</div>
+                  <div class="card-cost" style="font-size:9.5px;">$0.664</div>
+                  <div class="card-chevron" id="chev-acc-a3-c2">▼</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. 方案 B 容器: 全局扁平流 + 血统徽章与穿梭过滤 -->
+      <div id="viewVariantB" class="variant-container" style="display: none;">
+        <!-- 穿梭筛选胶囊 -->
+        <div class="filter-pills-bar">
+          <div class="filter-chip active" onclick="filterB('all', this)">全部 (9)</div>
+          <div class="filter-chip" onclick="filterB('l1', this)">L1 主派生 (3)</div>
+          <div class="filter-chip" onclick="filterB('l2', this)">L2 嵌套衍生 (6)</div>
+          <div class="filter-chip" onclick="filterB('top', this)">💰 消耗降序 Top</div>
+        </div>
+
+        <div id="flatListB" style="display: flex; flex-direction: column; gap: 7px;">
+          <!-- Items dynamically rendered/filtered in JS for variant B -->
+        </div>
+      </div>
+
+      <!-- 6. 方案 C 容器: 双向钻取面包屑导航 -->
+      <div id="viewVariantC" class="variant-container" style="display: none;">
+        <!-- C 视图 1: 顶层 Master 列表 -->
+        <div id="cMasterView" style="display: flex; flex-direction: column; gap: 8px;">
+          <div class="subagent-card" onclick="drillDownC('branch1')">
+            <div class="card-header-row">
+              <div class="status-dot done"></div>
+              <div class="card-info">
+                <div class="card-role">Character & Human Aesthetic Researcher</div>
+                <div class="card-sub">
+                  <span class="branch-pill" style="font-size:8.5px;">包含 2 个派生子任务</span>
+                </div>
+              </div>
+              <div class="card-right-metric">
+                <div style="text-align: right;">
+                  <div class="card-tok">汇总 419.1k</div>
+                  <div class="card-cost">$0.924</div>
+                </div>
+                <div style="font-size: 14px; color: var(--accent); font-weight: bold; margin-left: 2px;">›</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="subagent-card" onclick="drillDownC('branch2')">
+            <div class="card-header-row">
+              <div class="status-dot done"></div>
+              <div class="card-info">
+                <div class="card-role">Landscape & Scene Aesthetic Researcher</div>
+                <div class="card-sub">
+                  <span class="branch-pill" style="font-size:8.5px;">包含 2 个派生子任务</span>
+                </div>
+              </div>
+              <div class="card-right-metric">
+                <div style="text-align: right;">
+                  <div class="card-tok">汇总 357.4k</div>
+                  <div class="card-cost">$0.550</div>
+                </div>
+                <div style="font-size: 14px; color: var(--accent); font-weight: bold; margin-left: 2px;">›</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="subagent-card" onclick="drillDownC('branch3')">
+            <div class="card-header-row">
+              <div class="status-dot done"></div>
+              <div class="card-info">
+                <div class="card-role">Subagent (Synthesis & Grill)</div>
+                <div class="card-sub">
+                  <span class="branch-pill" style="font-size:8.5px;">包含 2 个派生子任务</span>
+                </div>
+              </div>
+              <div class="card-right-metric">
+                <div style="text-align: right;">
+                  <div class="card-tok">汇总 604.5k</div>
+                  <div class="card-cost">$1.184</div>
+                </div>
+                <div style="font-size: 14px; color: var(--accent); font-weight: bold; margin-left: 2px;">›</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- C 视图 2: 钻取 Detail 视图 (点击进入) -->
+        <div id="cDetailView" class="drilldown-view">
+          <div class="breadcrumb-nav">
+            <button class="btn-back" onclick="backToMasterC()">‹ 返回上层</button>
+            <span class="breadcrumb-title" id="cDetailBreadcrumb">Character & Human...</span>
+          </div>
+
+          <div class="branch-summary-banner" id="cDetailBanner">
+            <span>直属: <strong>92.9k</strong></span>
+            <span>派生: <strong>326.2k</strong></span>
+            <span>分支总计: <strong style="color:var(--cost-color);">$0.924</strong></span>
+          </div>
+
+          <div id="cDetailList" style="display: flex; flex-direction: column; gap: 6px;">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 底部固定原型切换浮条 -->
+  <div class="proto-switcher-bar">
+    <button class="proto-nav-btn" onclick="prevVariant()" title="上一方案 (← 方向键)">‹</button>
+    <div class="proto-label">
+      <span class="proto-badge" id="badgeVariantKey">方案 A</span>
+      <span id="labelVariantName">树形级联折叠 (Hierarchical Tree)</span>
+    </div>
+    <button class="proto-nav-btn" onclick="nextVariant()" title="下一方案 (→ 方向键)">›</button>
+    <div class="proto-hint">
+      支持键盘 <code>←</code> <code>→</code> 瞬切 · URL <code>?variant=A|B|C</code>
+    </div>
+  </div>
+
+  <script>
+    // 真实全量 9 个 Subagent 数据集
+    const fullDataset = [
+      { id: "5edaf9b9", parentId: "root", level: 1, role: "Character & Human Aesthetic Researcher", type: "DeepInvestigator", state: "done", billed: 92881, cost: 0.1499, pTok: 69811, cTok: 23070, caTok: 73433, ttft: 3.85, speed: 291 },
+      { id: "21918498", parentId: "5edaf9b9", level: 2, role: "L2: Layer 0 Investigation Worker", parentRole: "Character", type: "DeepInvestigatorWorker", state: "done", billed: 232191, cost: 0.6131, pTok: 198192, cTok: 33999, caTok: 2246671, ttft: 4.42, speed: 112 },
+      { id: "b8475a0f", parentId: "5edaf9b9", level: 2, role: "L2: Layer 0 Improvement Worker", parentRole: "Character", type: "DeepInvestigatorWorker", state: "done", billed: 93977, cost: 0.1609, pTok: 79531, cTok: 14446, caTok: 314109, ttft: 5.58, speed: 120 },
+
+      { id: "721e6b3e", parentId: "root", level: 1, role: "Landscape & Scene Aesthetic Researcher", type: "DeepInvestigator", state: "done", billed: 98186, cost: 0.1335, pTok: 81291, cTok: 16895, caTok: 61159, ttft: 3.00, speed: 327 },
+      { id: "700b8d35", parentId: "721e6b3e", level: 2, role: "L2: Layer 0 Scene Extraction", parentRole: "Landscape", type: "DeepInvestigatorWorker", state: "done", billed: 105779, cost: 0.1858, pTok: 93932, cTok: 11847, caTok: 472855, ttft: 2.78, speed: 141 },
+      { id: "22553f82", parentId: "721e6b3e", level: 2, role: "L2: Layer 0 Composition Worker", parentRole: "Landscape", type: "DeepInvestigatorWorker", state: "done", billed: 153446, cost: 0.2300, pTok: 135519, cTok: 17927, caTok: 407720, ttft: 4.85, speed: 90 },
+
+      { id: "62ca63f6", parentId: "root", level: 1, role: "Subagent (Synthesis & Grill)", type: "DeepInvestigator", state: "done", billed: 191063, cost: 0.2849, pTok: 146097, cTok: 44966, caTok: 44902, ttft: 3.33, speed: 398 },
+      { id: "ed5ac7d7", parentId: "62ca63f6", level: 2, role: "L2: Cross-Modal Cross-Check", parentRole: "Synthesis", type: "DeepInvestigatorWorker", state: "done", billed: 135636, cost: 0.2353, pTok: 116401, cTok: 19235, caTok: 505703, ttft: 2.80, speed: 172 },
+      { id: "87fe6375", parentId: "62ca63f6", level: 2, role: "L2: Grill Counter-Proposer", parentRole: "Synthesis", type: "DeepInvestigatorWorker", state: "done", billed: 277826, cost: 0.6643, pTok: 248578, cTok: 29248, caTok: 2454675, ttft: 2.75, speed: 151 }
+    ];
+
+    const variants = [
+      { key: "A", name: "树形级联折叠 (Hierarchical Tree)", desc: "以直属为主干，分支手风琴内嵌递归展开" },
+      { key: "B", name: "全局扁平流 + 血统徽章与穿梭过滤 (Flat Rollup Stream)", desc: "全部 9 个平铺展开，带 L1/L2 血统药丸与快速穿梭筛选" },
+      { key: "C", name: "双向钻取面包屑导航 (Drilldown Breadcrumbs)", desc: "最省空间！顶层汇总单卡，点击下钻进入专属子任务页" }
+    ];
+
+    let currentVariantIdx = 0;
+    const themes = ["warm", "light", "dark"];
+    const themeNames = { warm: "暖阳纸墨", light: "极简明亮", dark: "深邃暗夜" };
+    let currentThemeIdx = 0;
+
+    function fmt(tok) {
+      if (tok >= 1e6) return (tok / 1e6).toFixed(2) + "M";
+      if (tok >= 1e3) return (tok / 1e3).toFixed(1) + "k";
+      return tok;
+    }
+
+    // 切换宽度
+    function setWidth(mode) {
+      const wrapper = document.getElementById("capsuleWrapper");
+      const btnC = document.getElementById("btnWidthCompact");
+      const btnD = document.getElementById("btnWidthDual");
+      if (mode === 'dual_wing') {
+        wrapper.classList.add('dual-wing');
+        btnD.classList.add('active');
+        btnC.classList.remove('active');
+      } else {
+        wrapper.classList.remove('dual-wing');
+        btnC.classList.add('active');
+        btnD.classList.remove('active');
+      }
+    }
+
+    // 切换主题
+    function cycleTheme() {
+      currentThemeIdx = (currentThemeIdx + 1) % themes.length;
+      const t = themes[currentThemeIdx];
+      document.documentElement.setAttribute("data-theme", t);
+      document.getElementById("themeName").innerText = themeNames[t];
+    }
+
+    // 手风琴展开与收起
+    function toggleAccordion(id, event) {
+      if (event) event.stopPropagation();
+      const el = document.getElementById(id);
+      const chev = document.getElementById('chev-' + id);
+      if (el) {
+        el.classList.toggle('open');
+        if (chev) chev.classList.toggle('expanded');
+      }
+    }
+
+    // 方案 A: 树形分支折叠
+    function toggleTree(id, btn, event) {
+      if (event) event.stopPropagation();
+      const el = document.getElementById(id);
+      if (el) {
+        el.classList.toggle('open');
+        const isOpen = el.classList.contains('open');
+        btn.querySelector('.btn-text').innerText = isOpen ? '收起子任务' : '展开子任务';
+        btn.querySelector('span:last-child').innerText = isOpen ? '▲' : '▼';
+      }
+    }
+
+    // 方案 B: 扁平列表渲染与筛选
+    function renderVariantB(filter = 'all') {
+      const container = document.getElementById('flatListB');
+      let items = [...fullDataset];
+      if (filter === 'l1') items = items.filter(x => x.level === 1);
+      if (filter === 'l2') items = items.filter(x => x.level === 2);
+      if (filter === 'top') items.sort((a, b) => b.billed - a.billed);
+
+      container.innerHTML = items.map((item, idx) => `
+        <div class="subagent-card" onclick="toggleAccordion('acc-b-${idx}', event)">
+          <div class="card-header-row">
+            <div class="status-dot done"></div>
+            <div class="card-info">
+              <div class="card-role">
+                <span class="tag-level ${item.level === 1 ? 'tag-l1' : 'tag-l2'}">L${item.level}</span>
+                ${item.role}
+              </div>
+              <div class="card-sub">
+                ${item.level === 2 ? `<span class="parent-link">↳ 属: ${item.parentRole} ·</span>` : ''}
+                ${item.type} · 已完成
+              </div>
+            </div>
+            <div class="card-right-metric">
+              <div class="card-tok">计费 ${fmt(item.billed)}</div>
+              <div class="card-cost">$${item.cost.toFixed(3)}</div>
+              <div class="card-chevron" id="chev-acc-b-${idx}">▼</div>
+            </div>
+          </div>
+          <div class="detail-frame" id="acc-b-${idx}">
+            <div class="detail-row"><span>计费总量 (入+出):</span><span class="val">${fmt(item.billed)} ($${item.cost.toFixed(3)})</span></div>
+            <div class="detail-row"><span>输入 / 缓存命中:</span><span class="val">${fmt(item.pTok)} / ${fmt(item.caTok)}</span></div>
+            <div class="detail-row"><span>模型输出 / 思考:</span><span class="val">${fmt(item.cTok)}</span></div>
+            <div class="detail-row"><span>首字响应 / 速度:</span><span class="val">${item.ttft}s · ${item.speed}t/s</span></div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function filterB(type, el) {
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+      renderVariantB(type);
+    }
+
+    // 方案 C: 面包屑钻取交互
+    const branchMap = {
+      branch1: {
+        title: "Character & Human Aesthetic Researcher",
+        direct: "92.9k",
+        sub: "326.2k",
+        totalCost: "$0.924",
+        children: fullDataset.filter(x => x.parentId === "5edaf9b9")
+      },
+      branch2: {
+        title: "Landscape & Scene Aesthetic Researcher",
+        direct: "98.2k",
+        sub: "259.2k",
+        totalCost: "$0.550",
+        children: fullDataset.filter(x => x.parentId === "721e6b3e")
+      },
+      branch3: {
+        title: "Subagent (Synthesis & Grill)",
+        direct: "191.1k",
+        sub: "413.5k",
+        totalCost: "$1.184",
+        children: fullDataset.filter(x => x.parentId === "62ca63f6")
+      }
+    };
+
+    function drillDownC(branchKey) {
+      const data = branchMap[branchKey];
+      if (!data) return;
+      document.getElementById('cMasterView').style.display = 'none';
+      const dView = document.getElementById('cDetailView');
+      dView.classList.add('active');
+
+      document.getElementById('cDetailBreadcrumb').innerText = data.title;
+      document.getElementById('cDetailBanner').innerHTML = `
+        <span>直属: <strong>${data.direct}</strong></span>
+        <span>派生: <strong>${data.sub}</strong></span>
+        <span>分支总计: <strong style="color:var(--cost-color);">${data.totalCost}</strong></span>
+      `;
+
+      document.getElementById('cDetailList').innerHTML = data.children.map((child, idx) => `
+        <div class="subagent-card" style="background:var(--card-bg);" onclick="toggleAccordion('acc-c-sub-${idx}', event)">
+          <div class="card-header-row">
+            <div class="status-dot done"></div>
+            <div class="card-info">
+              <div class="card-role" style="font-size:10.5px;">${child.role}</div>
+              <div class="card-sub">${child.type} · 已完成</div>
+            </div>
+            <div class="card-right-metric">
+              <div class="card-tok" style="font-size:10.5px;">计费 ${fmt(child.billed)}</div>
+              <div class="card-cost">$${child.cost.toFixed(3)}</div>
+              <div class="card-chevron" id="chev-acc-c-sub-${idx}">▼</div>
+            </div>
+          </div>
+          <div class="detail-frame" id="acc-c-sub-${idx}">
+            <div class="detail-row"><span>计费总量 (入+出):</span><span class="val">${fmt(child.billed)} ($${child.cost.toFixed(3)})</span></div>
+            <div class="detail-row"><span>输入 / 缓存命中:</span><span class="val">${fmt(child.pTok)} / ${fmt(child.caTok)}</span></div>
+            <div class="detail-row"><span>首字响应 / 速度:</span><span class="val">${child.ttft}s · ${child.speed}t/s</span></div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function backToMasterC() {
+      document.getElementById('cDetailView').classList.remove('active');
+      document.getElementById('cMasterView').style.display = 'flex';
+    }
+
+    // 方案切换核心控制器
+    function applyVariant(idx) {
+      currentVariantIdx = (idx + variants.length) % variants.length;
+      const v = variants[currentVariantIdx];
+
+      // 更新标签与按键指示
+      document.getElementById('badgeVariantKey').innerText = `方案 ${v.key}`;
+      document.getElementById('labelVariantName').innerText = v.name;
+
+      // 切换视图显隐
+      document.getElementById('viewVariantA').style.display = (v.key === 'A') ? 'flex' : 'none';
+      document.getElementById('viewVariantB').style.display = (v.key === 'B') ? 'flex' : 'none';
+      document.getElementById('viewVariantC').style.display = (v.key === 'C') ? 'flex' : 'none';
+
+      if (v.key === 'B') renderVariantB('all');
+      if (v.key === 'C') backToMasterC();
+
+      // 更新 URL Search Param，确保刷新或复制链接稳定
+      const url = new URL(window.location);
+      url.searchParams.set('variant', v.key);
+      window.history.replaceState({}, '', url);
+    }
+
+    function prevVariant() { applyVariant(currentVariantIdx - 1); }
+    function nextVariant() { applyVariant(currentVariantIdx + 1); }
+
+    // 监听键盘 ← → 左右方向键
+    window.addEventListener('keydown', (e) => {
+      if (['input', 'textarea'].includes(document.activeElement.tagName.toLowerCase())) return;
+      if (e.key === 'ArrowLeft') { prevVariant(); }
+      if (e.key === 'ArrowRight') { nextVariant(); }
+    });
+
+    // 初始化读取 URL 参数
+    const initKey = (new URLSearchParams(window.location.search).get('variant') || 'A').toUpperCase();
+    const foundIdx = variants.findIndex(v => v.key === initKey);
+    applyVariant(foundIdx >= 0 ? foundIdx : 0);
+  </script>
+</body>
+</html>

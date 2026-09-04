@@ -385,3 +385,98 @@ def test_ignore_command_output_and_message_completion(mock_antigravity_env):
     assert subs[0]["state"] == "done"
     assert "已完成" in subs[0]["lastAction"]
 
+def test_recursive_multilevel_subagent_discovery(mock_antigravity_env):
+    """Tests recursive multi-level discovery (L1 -> L2) with BFS traversal and tree hierarchy construction."""
+    env = mock_antigravity_env
+    engine = DataEngine()
+    engine.conv_dir = env["conv_dir"]
+    engine.brain_dir = env["brain_dir"]
+
+    primary_id = "primary-root-1111-2222-3333-000000000001"
+    l1_id = "l1-subagent-1111-2222-3333-000000000001"
+    l2_a_id = "l2-subagent-aaaa-2222-3333-000000000001"
+    l2_b_id = "l2-subagent-bbbb-2222-3333-000000000002"
+
+    # 1. Primary DB (10,000 tokens)
+    create_mock_db(os.path.join(env["conv_dir"], f"{primary_id}.db"), [
+        make_test_proto_blob(prompt=8000, candidates=2000)
+    ])
+
+    # 2. L1 DB (20,000 tokens)
+    create_mock_db(os.path.join(env["conv_dir"], f"{l1_id}.db"), [
+        make_test_proto_blob(prompt=18000, candidates=2000)
+    ])
+
+    # 3. L2 DBs (L2_A: 30,000 tokens, L2_B: 40,000 tokens)
+    create_mock_db(os.path.join(env["conv_dir"], f"{l2_a_id}.db"), [
+        make_test_proto_blob(prompt=25000, candidates=5000)
+    ])
+    create_mock_db(os.path.join(env["conv_dir"], f"{l2_b_id}.db"), [
+        make_test_proto_blob(prompt=35000, candidates=5000)
+    ])
+
+    # 4. Primary transcript: invokes L1
+    p_log = os.path.join(env["brain_dir"], primary_id, ".system_generated", "logs")
+    os.makedirs(p_log, exist_ok=True)
+    with open(os.path.join(p_log, "transcript.jsonl"), "w", encoding="utf-8") as f:
+        f.write("\n".join([
+            json.dumps({
+                "step_index": 1, "source": "MODEL", "type": "PLANNER_RESPONSE",
+                "tool_calls": [{"name": "invoke_subagent", "args": {"Subagents": [{"Role": "L1 Master Architect", "TypeName": "architect"}]}}]
+            }),
+            json.dumps({
+                "step_index": 2, "source": "MODEL", "type": "GENERIC",
+                "content": f'Created the following subagents:\n{{\n  "conversationId": "{l1_id}"\n}}'
+            })
+        ]) + "\n")
+
+    # 5. L1 transcript: invokes 2 L2 subagents (L2_A and L2_B)
+    l1_log = os.path.join(env["brain_dir"], l1_id, ".system_generated", "logs")
+    os.makedirs(l1_log, exist_ok=True)
+    with open(os.path.join(l1_log, "transcript.jsonl"), "w", encoding="utf-8") as f:
+        f.write("\n".join([
+            json.dumps({
+                "step_index": 1, "source": "MODEL", "type": "PLANNER_RESPONSE",
+                "tool_calls": [{"name": "invoke_subagent", "args": {"Subagents": [
+                    {"Role": "L2 Worker A", "TypeName": "worker"},
+                    {"Role": "L2 Worker B", "TypeName": "worker"}
+                ]}}]
+            }),
+            json.dumps({
+                "step_index": 2, "source": "MODEL", "type": "GENERIC",
+                "content": f'Created the following subagents:\n{{\n  "conversationId": "{l2_a_id}"\n}}\n{{\n  "conversationId": "{l2_b_id}"\n}}'
+            })
+        ]) + "\n")
+
+    # Run get_convo_stats
+    stats = engine.get_convo_stats(primary_id)
+    assert stats is not None
+    cluster = stats["cluster"]
+
+    # Total discovered across all levels must be 3
+    assert cluster["totalCount"] == 3
+    # Total tokens = 20k (L1) + 30k (L2_A) + 40k (L2_B) = 90,000
+    assert cluster["totalTokens"] == 20000 + 30000 + 40000
+    assert cluster["totalCostUsd"] > 0
+
+    # Root subagents list must have exactly 1 item (L1)
+    assert len(cluster["subagents"]) == 1
+    l1_node = cluster["subagents"][0]
+    assert l1_node["id"] == l1_id
+    assert l1_node["role"] == "L1 Master Architect"
+    assert l1_node["depth"] == 1
+    assert l1_node["totalTokens"] == 20000
+
+    # L1 must have 2 children in tree structure
+    assert len(l1_node["children"]) == 2
+    child_ids = [c["id"] for c in l1_node["children"]]
+    assert l2_a_id in child_ids
+    assert l2_b_id in child_ids
+
+    c_a = next(c for c in l1_node["children"] if c["id"] == l2_a_id)
+    assert c_a["role"] == "L2 Worker A"
+    assert c_a["depth"] == 2
+    assert c_a["parentId"] == l1_id
+    assert c_a["totalTokens"] == 30000
+
+
