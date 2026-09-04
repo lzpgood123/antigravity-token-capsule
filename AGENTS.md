@@ -35,6 +35,44 @@ All operational tools reside as independent subdirectories under `tools/` (e.g.,
 
 ---
 
+## 📝 Git 提交规范 (Git Commit Guidelines)
+
+所有提交必须严格遵循 **作用域式约定式提交 (Conventional Commits with Scope)**，以确保 Monorepo 内各工具的演进历史清晰可追溯：
+
+### 1. 提交消息格式
+```
+<type>(<scope>): <subject>
+```
+
+* **`<type>`（必填）**：
+  * `feat`: 新增工具或功能特性
+  * `fix`: 修复缺陷或异常
+  * `docs`: 仅文档更新（如 `README.md`, `CONTEXT.md`, ADR）
+  * `refactor`: 代码重构（不改变功能也不修 Bug）
+  * `perf`: 性能优化
+  * `test`: 测试用例新增或调整
+  * `chore`: 依赖更新、构建脚本、全局规范调整
+* **`<scope>`（强制规范）**：
+  * **工具级别变更**：必须使用具体工具目录名作为 scope，如 `token-capsule`、`<future-tool>`。
+  * **全局或架构变更**：使用 `root`、`repo` 或 `gallery`。
+* **`<subject>`（必填）**：简要说明改动内容，祈使句，不超过 72 个字符。
+
+### 2. 常见场景范例
+| 场景 | 推荐 Commit 示例 |
+| :--- | :--- |
+| 为特定工具新增特性 | `feat(token-capsule): 新增 Token 历史趋势折线图` |
+| 修复特定工具的缺陷 | `fix(token-capsule): 修复 CDP 端口断开导致的闪退` |
+| 调整特定工具的文档 | `docs(token-capsule): 补充启动参数说明与快捷键配置` |
+| 新增一个独立工具 | `feat(clipboard-sync): 初始化剪贴板同步小工具四件套` |
+| 更新全局规范与配置 | `chore(repo): 在 AGENTS.md 中增加 Git 提交规范` |
+| 更新根目录画廊看板 | `docs(gallery): 登记新工具至 README.md 画廊表格` |
+
+### 3. 原子提交准则 (Atomic Commits)
+* **禁止跨工具混合提交**：一次 Commit 应当只聚焦于一个具体的工具或单一意图。严禁在同一提交中混入两个不相关工具的代码。
+* **工单关联（可选）**：完成 `.scratch/` 工单时，可在消息中注明工单号，如 `feat(token-capsule): 优化托盘交互 (#01)`。
+
+---
+
 ## Agent skills
 
 ### Issue tracker
