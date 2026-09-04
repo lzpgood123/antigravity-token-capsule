@@ -823,6 +823,13 @@ class CapsuleWindow(QWidget):
             self.global_rollup_box.setVisible(False)
             self.switch_tab(self.active_tab)
         else:  # dual_wing
+            screen = QGuiApplication.primaryScreen().availableGeometry() if QGuiApplication.primaryScreen() else None
+            if screen:
+                curr_pos = self.pos()
+                if curr_pos.x() + 680 > screen.right():
+                    new_x = max(screen.left() + 20, screen.right() - 690)
+                    self.move(new_x, curr_pos.y())
+
             self.setFixedWidth(680)
             self.card_frame.setFixedWidth(680)
             self.tab_bar.setVisible(False)
