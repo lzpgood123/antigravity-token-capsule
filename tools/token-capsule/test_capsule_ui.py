@@ -116,7 +116,7 @@ def test_window_initialization(window):
     assert hasattr(window, "btn_tab_primary")
     assert hasattr(window, "btn_tab_cluster")
     assert window.layout_mode == "compact"
-    assert window.width() == 320 or window.card_frame.width() == 320
+    assert window.width() == 340 or window.card_frame.width() == 340
 
 def test_data_update_without_subagents(window):
     """Verifies data update for a primary session with zero subagents."""
@@ -201,7 +201,7 @@ def test_layout_mode_switching(window):
     # Switch back to compact
     window.set_layout_mode("compact")
     assert window.layout_mode == "compact"
-    assert window.width() == 320
+    assert window.width() == 340
     assert window.wing_divider.isVisible() is False
 
 def test_theme_compatibility(window):
@@ -228,7 +228,7 @@ def test_toggle_mode_width_constraints(window):
     window.toggle_mode()
     assert window.is_expanded is True
     assert window.card_frame.isVisible() is True
-    assert window.width() == 320
+    assert window.width() == 340
 
     # Expand back to card in dual_wing mode
     window.set_layout_mode("dual_wing")
@@ -445,5 +445,80 @@ def test_hierarchical_tree_rendering_and_branch_toggle(window):
     c1.toggle_accordion()
     assert c1.detail_frame.isVisible() is True
     assert root_card.detail_frame.isVisible() is False  # parent accordion unaffected
+
+def test_long_unspaced_type_name_and_branch_layout(window):
+    """Verifies that long continuous camelCase type names do not push right-side metrics off-screen."""
+    l2_long_type_child = {
+        "id": "l2-long-0001",
+        "parentId": "l1-root-0002",
+        "depth": 2,
+        "role": "ImprovementWorker",
+        "type": "DeepInvestigatorImprovementWorker",
+        "state": "running",
+        "totalTokens": 15000,
+        "costUsd": 0.018,
+        "promptTokens": 13000,
+        "candidateTokens": 2000,
+        "thinkingTokens": 200,
+        "cachedTokens": 8000,
+        "ttft": 0.35,
+        "speed": 65.0,
+        "lastAction": "运行中...",
+        "children": []
+    }
+    l1_root = {
+        "id": "l1-root-0002",
+        "parentId": "primary-0002",
+        "depth": 1,
+        "role": "Lead Architect",
+        "type": "architect",
+        "state": "running",
+        "totalTokens": 30000,
+        "costUsd": 0.036,
+        "promptTokens": 27000,
+        "candidateTokens": 3000,
+        "thinkingTokens": 500,
+        "cachedTokens": 20000,
+        "ttft": 0.40,
+        "speed": 75.0,
+        "lastAction": "运行中...",
+        "children": [l2_long_type_child]
+    }
+    cluster = {
+        "totalTokens": 45000,
+        "totalCostUsd": 0.054,
+        "combinedCostUsd": 0.100,
+        "totalCount": 2,
+        "runningCount": 2,
+        "doneCount": 0,
+        "activeCount": 2,
+        "completedCount": 0,
+        "subagents": [l1_root],
+        "allSubagents": [l1_root, l2_long_type_child]
+    }
+    data = {
+        "conversationId": "primary-0002",
+        "title": "Long Type Name Session",
+        "activeContext": 15000,
+        "breakdown": {},
+        "turn": {},
+        "cumulative": {"costUsd": 0.046, "billedTokens": 15000},
+        "cluster": cluster
+    }
+    window.update_data(data)
+    window.switch_tab("cluster")
+
+    root_card = window.subagent_cards[0]
+    root_card.toggle_branch()
+    assert root_card.children_container.isVisible() is True
+
+    child_card = root_card.child_widgets[0]
+    assert child_card.lbl_sub.wordWrap() is True
+    assert child_card.lbl_tok.text() == "计费 15.0k"
+    assert child_card.lbl_cost.text() == "$0.018"
+    assert child_card.lbl_chevron.text() == "▼"
+    # Ensure window width is maintained at 340 without forcing window to stretch
+    assert window.width() == 340
+
 
 

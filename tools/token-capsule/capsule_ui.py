@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from PySide6.QtCore import Qt, QPoint, Signal
 from PySide6.QtGui import (
     QColor, QCursor, QGuiApplication, QPainter, QPainterPath
@@ -472,13 +473,21 @@ class SubagentCardWidget(QFrame):
         role_font_size = "10px" if self.depth > 1 else "11px"
         self.lbl_role.setStyleSheet(f"font-size: {role_font_size}; font-weight: 700;")
         self.lbl_role.setWordWrap(True)
+        self.lbl_role.setMinimumWidth(0)
+        self.lbl_role.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         name_box.addWidget(self.lbl_role)
 
         sub_type = self.agent_data.get("type") or "子智能体"
+        clean_type = re.sub(r'([a-z])([A-Z])', r'\1 \2', sub_type)
+        if len(clean_type) > 22:
+            clean_type = clean_type[:20] + "..."
         state_str = "运行中" if is_running else "已完成"
         depth_tag = f"L{self.depth} · " if self.depth > 1 else ""
-        self.lbl_sub = QLabel(f"{depth_tag}{sub_type} · {state_str}", self)
+        self.lbl_sub = QLabel(f"{depth_tag}{clean_type} · {state_str}", self)
         self.lbl_sub.setProperty("class", "SubagentSub")
+        self.lbl_sub.setWordWrap(True)
+        self.lbl_sub.setMinimumWidth(0)
+        self.lbl_sub.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         name_box.addWidget(self.lbl_sub)
         summary_row.addLayout(name_box, 1)
 
@@ -492,17 +501,23 @@ class SubagentCardWidget(QFrame):
         ttft = self.agent_data.get("ttft", 0.0)
         speed = self.agent_data.get("speed", 0.0)
 
+        right_box = QHBoxLayout()
+        right_box.setContentsMargins(0, 0, 0, 0)
+        right_box.setSpacing(5)
+
         self.lbl_tok = QLabel(f"计费 {fmt_tokens(tot_tok)}", self)
         self.lbl_tok.setStyleSheet("font-size: 11px; font-weight: 700;")
-        summary_row.addWidget(self.lbl_tok)
+        right_box.addWidget(self.lbl_tok)
 
         self.lbl_cost = QLabel(f"${cost:.3f}", self)
         self.lbl_cost.setObjectName("SubagentCost")
-        summary_row.addWidget(self.lbl_cost)
+        right_box.addWidget(self.lbl_cost)
 
         self.lbl_chevron = QLabel("▼", self)
         self.lbl_chevron.setProperty("class", "SubagentSub")
-        summary_row.addWidget(self.lbl_chevron)
+        right_box.addWidget(self.lbl_chevron)
+
+        summary_row.addLayout(right_box, 0)
 
         card_l.addLayout(summary_row)
 
@@ -583,6 +598,9 @@ class SubagentCardWidget(QFrame):
                 self
             )
             self.lbl_branch_summary.setStyleSheet("font-size: 10px; font-weight: 600; color: #64748b;")
+            self.lbl_branch_summary.setWordWrap(True)
+            self.lbl_branch_summary.setMinimumWidth(0)
+            self.lbl_branch_summary.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
             self.branch_row.addWidget(self.lbl_branch_summary, 1)
 
             self.btn_toggle_branch = QPushButton("展开子任务 ▼", self)
@@ -690,7 +708,7 @@ class CapsuleWindow(QWidget):
         self.set_theme(self.current_theme, save=False)
 
         screen = QGuiApplication.primaryScreen().availableGeometry()
-        self.move(screen.width() - 350, 50)
+        self.move(screen.width() - 360, 50)
 
     def get_current_theme(self) -> str:
         return self.current_theme
@@ -915,7 +933,7 @@ class CapsuleWindow(QWidget):
 
         m_metric_box = QVBoxLayout()
         m_metric_box.setSpacing(1)
-        lbl_m_title = QLabel("Subagent 计费消耗 (含嵌套派生)", self.micro_dashboard)
+        lbl_m_title = QLabel("Subagent 计费消耗", self.micro_dashboard)
         lbl_m_title.setStyleSheet("font-size: 9px; color: #64748b; font-weight: 700;")
         m_metric_box.addWidget(lbl_m_title)
 
@@ -939,6 +957,7 @@ class CapsuleWindow(QWidget):
         self.scroll_area.setMinimumHeight(300)
 
         self.scroll_content = QWidget()
+        self.scroll_content.setMinimumWidth(0)
         self.subagent_list_layout = QVBoxLayout(self.scroll_content)
         self.subagent_list_layout.setContentsMargins(0, 0, 6, 0)
         self.subagent_list_layout.setSpacing(6)
@@ -1013,14 +1032,14 @@ class CapsuleWindow(QWidget):
         self.main_layout.addWidget(self.pill_frame)
 
     def set_layout_mode(self, mode: str, save: bool = True):
-        """动态切换紧凑单卡 (compact, 320px) 或展开双翼 (dual_wing, 680px) 模式"""
+        """动态切换紧凑单卡 (compact, 340px) 或展开双翼 (dual_wing, 680px) 模式"""
         if mode not in ("compact", "dual_wing"):
             mode = "compact"
         self.layout_mode = mode
 
         if mode == "compact":
-            self.setFixedWidth(320)
-            self.card_frame.setFixedWidth(320)
+            self.setFixedWidth(340)
+            self.card_frame.setFixedWidth(340)
             self.view_primary.setMinimumHeight(380)
             self.view_cluster.setMinimumHeight(380)
             self.tab_bar.setVisible(True)
@@ -1272,7 +1291,7 @@ class CapsuleWindow(QWidget):
         else:
             self.card_frame.setVisible(True)
             self.pill_frame.setVisible(False)
-            target_w = 680 if self.layout_mode == "dual_wing" else 320
+            target_w = 680 if self.layout_mode == "dual_wing" else 340
             self.setFixedWidth(target_w)
             self.card_frame.setFixedWidth(target_w)
         self.adjustSize()

@@ -240,6 +240,15 @@ def test_polling_incremental_subagent_updates(mock_antigravity_env):
     os.makedirs(logs_dir, exist_ok=True)
     with open(os.path.join(logs_dir, "transcript.jsonl"), "w", encoding="utf-8") as f:
         f.write(json.dumps({
+            "step_index": 0,
+            "source": "MODEL",
+            "type": "PLANNER_RESPONSE",
+            "tool_calls": [{
+                "name": "invoke_subagent",
+                "args": {"Subagents": [{"Role": "Worker", "TypeName": "research"}]}
+            }]
+        }) + "\n")
+        f.write(json.dumps({
             "step_index": 1,
             "source": "MODEL",
             "type": "GENERIC",
