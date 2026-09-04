@@ -3,7 +3,7 @@ import os
 import time
 import winreg
 from PySide6.QtWidgets import QApplication, QSystemTrayIcon, QMenu
-from PySide6.QtGui import QIcon, QAction, QPixmap, QColor, QPainter
+from PySide6.QtGui import QIcon, QAction, QActionGroup, QPixmap, QColor, QPainter
 from PySide6.QtCore import Qt
 
 # 处理 PyInstaller 打包环境与开发环境路径
@@ -18,7 +18,7 @@ if base_dir not in sys.path:
     sys.path.insert(0, base_dir)
 
 from data_engine import DataEngine
-from capsule_ui import CapsuleWindow
+from capsule_ui import CapsuleWindow, THEME_CONFIGS
 
 class StartupManager:
     """管理 Windows 开机自启注册表项 (HKCU)"""
@@ -94,6 +94,23 @@ def main():
     act_toggle = QAction("显示/隐藏", menu)
     act_toggle.triggered.connect(lambda: window.setVisible(not window.isVisible()))
     menu.addAction(act_toggle)
+
+    # 🎨 主题风格切换子菜单
+    theme_menu = menu.addMenu("🎨 主题风格")
+    theme_group = QActionGroup(menu)
+    theme_group.setExclusive(True)
+
+    curr_theme = window.get_current_theme()
+    for tid, tcfg in THEME_CONFIGS.items():
+        title = tcfg.get("name", tid)
+        act_theme = QAction(title, theme_menu, checkable=True)
+        if tid == curr_theme:
+            act_theme.setChecked(True)
+        act_theme.triggered.connect(lambda checked=False, t=tid: window.set_theme(t))
+        theme_group.addAction(act_theme)
+        theme_menu.addAction(act_theme)
+
+    menu.addSeparator()
 
     act_ontop = QAction("窗口总在最前", menu, checkable=True)
     act_ontop.setChecked(True)
