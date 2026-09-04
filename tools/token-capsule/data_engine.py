@@ -57,6 +57,7 @@ class DataEngine(QObject):
         # 子智能体发现缓存与文件监听状态
         self.discovered_subagents = {}  # conv_id -> dict of subagent info
         self.subagent_db_mtimes = {}   # sub_id -> float mtime
+        self.subagent_t_mtimes = {}    # sub_id -> float transcript mtime
 
         # 定时器：300ms 快速无锁轮询，精准跟随用户当前界面
         self.poll_timer = QTimer(self)
@@ -177,10 +178,11 @@ class DataEngine(QObject):
                 except Exception:
                     pass
 
-            # (3) 各子智能体的数据库
+            # (3) 各子智能体的数据库与日志（捕获新派生与步骤）
             for sub_id in list(self.discovered_subagents.keys()):
                 s_db = os.path.join(self.conv_dir, f"{sub_id}.db")
                 s_wal = os.path.join(self.conv_dir, f"{sub_id}.db-wal")
+                s_t = os.path.join(self.brain_dir, sub_id, ".system_generated", "logs", "transcript.jsonl")
                 if os.path.exists(s_db):
                     try:
                         sm = os.path.getmtime(s_db)
@@ -189,6 +191,14 @@ class DataEngine(QObject):
                             sm += os.path.getsize(s_wal) * 1e-6
                         if sm != self.subagent_db_mtimes.get(sub_id, 0):
                             self.subagent_db_mtimes[sub_id] = sm
+                            has_changes = True
+                    except Exception:
+                        pass
+                if os.path.exists(s_t):
+                    try:
+                        stm = os.path.getmtime(s_t) + os.path.getsize(s_t) * 1e-6
+                        if stm != self.subagent_t_mtimes.get(sub_id, 0):
+                            self.subagent_t_mtimes[sub_id] = stm
                             has_changes = True
                     except Exception:
                         pass
@@ -260,12 +270,19 @@ class DataEngine(QObject):
         for sub_id in list(self.discovered_subagents.keys()):
             s_db = os.path.join(self.conv_dir, f"{sub_id}.db")
             s_wal = os.path.join(self.conv_dir, f"{sub_id}.db-wal")
+            s_t = os.path.join(self.brain_dir, sub_id, ".system_generated", "logs", "transcript.jsonl")
             if os.path.exists(s_db):
                 try:
                     sm = os.path.getmtime(s_db)
                     if os.path.exists(s_wal):
                         sm = max(sm, os.path.getmtime(s_wal)) + os.path.getsize(s_wal) * 1e-6
                     self.subagent_db_mtimes[sub_id] = sm
+                except Exception:
+                    pass
+            if os.path.exists(s_t):
+                try:
+                    stm = os.path.getmtime(s_t) + os.path.getsize(s_t) * 1e-6
+                    self.subagent_t_mtimes[sub_id] = stm
                 except Exception:
                     pass
 
@@ -293,29 +310,31 @@ class DataEngine(QObject):
         if full_data:
             self.session_updated.emit(full_data)
 
-    def _discover_subagents(self, primary_conv_id: str) -> list[dict]:
-        """从 primary_conv_id 的 transcript.jsonl 中动态提取派生的子智能体列表"""
-        if not primary_conv_id:
-            return []
+    def _scan_single_transcript_for_subagents(self, conv_id: str) -> dict:
+        """从特定会话的 transcript.jsonl (及 transcript_full.jsonl) 中提取直接派生的子智能体"""
+        if not conv_id:
+            return {}
 
-        transcript_path = os.path.join(self.brain_dir, primary_conv_id, ".system_generated", "logs", "transcript.jsonl")
+        logs_dir = os.path.join(self.brain_dir, conv_id, ".system_generated", "logs")
+        transcript_path = os.path.join(logs_dir, "transcript.jsonl")
+        transcript_full_path = os.path.join(logs_dir, "transcript_full.jsonl")
+
         if not os.path.exists(transcript_path):
-            return list(self.discovered_subagents.values())
+            return {}
 
         pending_subagents = []
 
+        # 优先从 transcript_full.jsonl 读取未截断的 invoke_subagent 参数，若无则从 transcript.jsonl 读取
+        invoke_scan_path = transcript_full_path if os.path.exists(transcript_full_path) else transcript_path
         try:
-            with open(transcript_path, "r", encoding="utf-8", errors="ignore") as f:
+            with open(invoke_scan_path, "r", encoding="utf-8", errors="ignore") as f:
                 for line in f:
-                    line = line.strip()
-                    if not line:
+                    if "invoke_subagent" not in line:
                         continue
                     try:
                         data = json.loads(line)
                     except Exception:
                         continue
-
-                    # 1. invoke_subagent 调用参数（若文本因日志截断抛出异常，使用正则降级提取）
                     tool_calls = data.get("tool_calls") or []
                     for tc in tool_calls:
                         if tc.get("name") == "invoke_subagent":
@@ -335,6 +354,20 @@ class DataEngine(QObject):
                                             "role": s.get("Role") or s.get("role") or "Subagent",
                                             "type": s.get("TypeName") or s.get("type") or "subagent"
                                         })
+        except Exception:
+            pass
+
+        found_map = {}
+        try:
+            with open(transcript_path, "r", encoding="utf-8", errors="ignore") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        data = json.loads(line)
+                    except Exception:
+                        continue
 
                     content = data.get("content", "")
                     if not content:
@@ -344,19 +377,19 @@ class DataEngine(QObject):
                     if "The command exited with code" in content or "Output:\n" in content or "The following changes were made by the" in content:
                         continue
 
-                    # 2. 子智能体创建返回
+                    # 1. 子智能体创建返回
                     if "Created the following subagents:" in content:
                         raw_cids = re.findall(r'"conversationId":\s*"([^"]+)"', content)
                         cids = []
                         for c in raw_cids:
-                            if c != primary_conv_id and not c.startswith("{") and (re.match(r'^[0-9a-fA-F-]{36}$', c) or c.startswith("subagent-") or c.startswith("sub-")):
+                            if c != conv_id and not c.startswith("{") and (re.match(r'^[0-9a-fA-F-]{36}$', c) or "sub" in c.lower() or c.startswith("agent-")):
                                 if c not in cids:
                                     cids.append(c)
 
                         for cid in cids:
                             info = pending_subagents.pop(0) if pending_subagents else {"role": "Subagent", "type": "subagent"}
-                            if cid not in self.discovered_subagents:
-                                self.discovered_subagents[cid] = {
+                            if cid not in found_map:
+                                found_map[cid] = {
                                     "id": cid,
                                     "role": info["role"],
                                     "type": info["type"],
@@ -364,7 +397,7 @@ class DataEngine(QObject):
                                     "lastAction": "运行中..."
                                 }
 
-                    # 3. active subagent(s) 状态与最新动作
+                    # 2. active subagent(s) 状态与最新动作
                     if "active subagent(s):" in content:
                         b1 = content.find("[")
                         b2 = content.rfind("]")
@@ -373,14 +406,14 @@ class DataEngine(QObject):
                                 active_list = json.loads(content[b1:b2+1], strict=False)
                                 for item in active_list:
                                     cid = item.get("conversationId")
-                                    if cid and cid != primary_conv_id and not cid.startswith("{"):
+                                    if cid and cid != conv_id and not cid.startswith("{"):
                                         st = item.get("state", "running")
                                         mapped_state = "done" if st in ("idle", "done", "errored") else "running"
                                         role = item.get("role")
                                         sub_type = item.get("type")
                                         state_detail = item.get("stateDetail")
-                                        if cid not in self.discovered_subagents:
-                                            self.discovered_subagents[cid] = {
+                                        if cid not in found_map:
+                                            found_map[cid] = {
                                                 "id": cid,
                                                 "role": role or "Subagent",
                                                 "type": sub_type or "subagent",
@@ -389,48 +422,83 @@ class DataEngine(QObject):
                                             }
                                         else:
                                             if mapped_state == "done":
-                                                self.discovered_subagents[cid]["state"] = "done"
-                                            if role and (self.discovered_subagents[cid]["role"] == "Subagent" or not self.discovered_subagents[cid]["role"]):
-                                                self.discovered_subagents[cid]["role"] = role
-                                            if sub_type and (self.discovered_subagents[cid]["type"] == "subagent" or not self.discovered_subagents[cid]["type"]):
-                                                self.discovered_subagents[cid]["type"] = sub_type
+                                                found_map[cid]["state"] = "done"
+                                            if role and (found_map[cid]["role"] == "Subagent" or not found_map[cid]["role"]):
+                                                found_map[cid]["role"] = role
+                                            if sub_type and (found_map[cid]["type"] == "subagent" or not found_map[cid]["type"]):
+                                                found_map[cid]["type"] = sub_type
                                             if state_detail:
-                                                self.discovered_subagents[cid]["lastAction"] = state_detail
+                                                found_map[cid]["lastAction"] = state_detail
                             except Exception:
                                 pass
 
-                    # 4. 子智能体向主会话发送回执消息（标记为完成）
+                    # 3. 子智能体向本级发送回执消息（标记为完成）
                     if "sender=" in content:
-                        for cid in list(self.discovered_subagents.keys()):
+                        for cid in list(found_map.keys()):
                             if f"sender={cid}" in content:
-                                self.discovered_subagents[cid]["state"] = "done"
-                                self.discovered_subagents[cid]["lastAction"] = "已完成任务并交付"
+                                found_map[cid]["state"] = "done"
+                                found_map[cid]["lastAction"] = "已完成任务并交付"
 
-            # 5. 补充检查子智能体独立的执行日志，判定是否已调用 send_message 交付任务
-            for cid in list(self.discovered_subagents.keys()):
-                if self.discovered_subagents[cid]["state"] != "done":
+            # 4. 补充检查子智能体独立的执行日志，判定是否已调用 send_message 交付任务
+            for cid in list(found_map.keys()):
+                if found_map[cid]["state"] != "done":
                     sub_t_path = os.path.join(self.brain_dir, cid, ".system_generated", "logs", "transcript.jsonl")
                     if os.path.exists(sub_t_path):
                         try:
                             with open(sub_t_path, "r", encoding="utf-8", errors="ignore") as sf:
                                 for s_line in sf:
                                     if '"name": "send_message"' in s_line or '"name":"send_message"' in s_line:
-                                        self.discovered_subagents[cid]["state"] = "done"
-                                        self.discovered_subagents[cid]["lastAction"] = "已完成任务并交付"
+                                        found_map[cid]["state"] = "done"
+                                        found_map[cid]["lastAction"] = "已完成任务并交付"
                                         break
                         except Exception:
                             pass
         except Exception:
             pass
 
+        return found_map
+
+    def _discover_subagents(self, primary_conv_id: str) -> list[dict]:
+        """从 primary_conv_id 开始，采用 BFS 广度优先递归遍历所有层级的子智能体 (支持 L1, L2, L3... 任意嵌套)"""
+        if not primary_conv_id:
+            return []
+
+        queue = [(primary_conv_id, 0)]
+        visited = {primary_conv_id}
+        all_discovered = {}
+
+        while queue:
+            curr_id, depth = queue.pop(0)
+            children_map = self._scan_single_transcript_for_subagents(curr_id)
+            for ch_id, ch_info in children_map.items():
+                if ch_id not in all_discovered:
+                    ch_info["id"] = ch_id
+                    ch_info["parentId"] = curr_id
+                    ch_info["depth"] = depth + 1
+                    all_discovered[ch_id] = ch_info
+                    if ch_id not in visited:
+                        visited.add(ch_id)
+                        queue.append((ch_id, depth + 1))
+                else:
+                    if ch_info.get("state") == "done":
+                        all_discovered[ch_id]["state"] = "done"
+                    if ch_info.get("role") and all_discovered[ch_id]["role"] == "Subagent":
+                        all_discovered[ch_id]["role"] = ch_info["role"]
+                    if ch_info.get("type") and all_discovered[ch_id]["type"] == "subagent":
+                        all_discovered[ch_id]["type"] = ch_info["type"]
+                    if ch_info.get("lastAction"):
+                        all_discovered[ch_id]["lastAction"] = ch_info["lastAction"]
+
         # 仅保留本地实际存在物理目录或数据库的合法子智能体
         valid_subagents = []
-        for cid, sub in list(self.discovered_subagents.items()):
+        for cid, sub in all_discovered.items():
             db_file = os.path.join(self.conv_dir, f"{cid}.db")
             brain_folder = os.path.join(self.brain_dir, cid)
-            if os.path.exists(db_file) or os.path.exists(brain_folder) or cid.startswith("sub"):
+            if os.path.exists(db_file) or os.path.exists(brain_folder) or "sub" in cid.lower() or cid.startswith("agent-"):
                 valid_subagents.append(sub)
 
+        # 同步更新本地已发现字典，方便定时器轮询监听 mtime
+        self.discovered_subagents = {s["id"]: s for s in valid_subagents}
         return valid_subagents
 
     def _extract_session_metrics(self, conv_id: str) -> dict:
@@ -516,25 +584,27 @@ class DataEngine(QObject):
         }
 
     def _get_cluster_stats(self, primary_conv_id: str) -> dict:
-        """聚合由 primary_conv_id 派生的所有子智能体的 Token、费用与状态"""
+        """递归聚合由 primary_conv_id 派生的全层级子智能体 (含 L1, L2, L3...) 的 Token、费用与树形结构"""
         subagents = self._discover_subagents(primary_conv_id)
         if not subagents:
             return {
                 "totalTokens": 0,
                 "totalCostUsd": 0.0,
                 "combinedCostUsd": 0.0,
+                "totalCount": 0,
                 "runningCount": 0,
                 "doneCount": 0,
                 "activeCount": 0,
                 "completedCount": 0,
-                "subagents": []
+                "subagents": [],
+                "allSubagents": []
             }
 
         cluster_tokens = 0
         cluster_cost = 0.0
         running_cnt = 0
         done_cnt = 0
-        sub_list = []
+        all_items = []
 
         for s in subagents:
             cid = s["id"]
@@ -561,8 +631,10 @@ class DataEngine(QObject):
             if ttft == 0.0 and m.get("latest"):
                 ttft = round(m["latest"].get("ttft", 0.0), 2)
 
-            sub_list.append({
+            all_items.append({
                 "id": cid,
+                "parentId": s.get("parentId", primary_conv_id),
+                "depth": s.get("depth", 1),
                 "role": s.get("role") or "Subagent",
                 "type": s.get("type") or "subagent",
                 "state": state,
@@ -574,18 +646,31 @@ class DataEngine(QObject):
                 "cachedTokens": m["cachedTokens"],
                 "ttft": ttft,
                 "speed": speed,
-                "lastAction": s.get("lastAction") or ("执行中..." if state == "running" else "已完成任务")
+                "lastAction": s.get("lastAction") or ("执行中..." if state == "running" else "已完成任务"),
+                "children": []
             })
+
+        # 组装树形级联结构
+        items_by_id = {item["id"]: item for item in all_items}
+        root_items = []
+        for item in all_items:
+            pid = item.get("parentId")
+            if pid and pid in items_by_id:
+                items_by_id[pid]["children"].append(item)
+            else:
+                root_items.append(item)
 
         return {
             "totalTokens": cluster_tokens,
             "totalCostUsd": round(cluster_cost, 3),
             "combinedCostUsd": 0.0,
+            "totalCount": len(all_items),
             "runningCount": running_cnt,
             "doneCount": done_cnt,
             "activeCount": running_cnt,
             "completedCount": done_cnt,
-            "subagents": sub_list
+            "subagents": root_items,
+            "allSubagents": all_items
         }
 
     def get_convo_stats(self, conv_id: str, fallback_data=None) -> dict:

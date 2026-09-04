@@ -284,6 +284,28 @@ QFrame#SubagentDetail {{
     padding: 6px;
 }}
 
+/* Tree Branch Toggle & Nested Children (Option A) */
+QPushButton.BranchToggleBtn {{
+    background-color: {cfg['card_bg']};
+    color: {cfg['accent']};
+    border: 1px solid {cfg['border']};
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 9px;
+    font-weight: 700;
+}}
+QPushButton.BranchToggleBtn:hover {{
+    background-color: {cfg['hover_bg']};
+    border: 1px solid {cfg['accent']};
+}}
+
+QFrame#ChildrenContainer, QFrame.ChildrenContainer {{
+    border-left: 2px solid {cfg['accent']};
+    margin-left: 6px;
+    padding-left: 4px;
+    margin-top: 2px;
+}}
+
 QScrollArea#SubagentScrollArea {{
     background: transparent;
     border: none;
@@ -413,6 +435,9 @@ class SubagentCardWidget(QFrame):
     def __init__(self, agent_data: dict, parent=None):
         super().__init__(parent)
         self.agent_data = agent_data
+        self.depth = agent_data.get("depth", 1)
+        self.children_data = agent_data.get("children", [])
+        self.child_widgets = []
         self.setObjectName("SubagentCard")
         self.setProperty("class", "SubagentCard")
         self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
@@ -420,7 +445,8 @@ class SubagentCardWidget(QFrame):
 
     def init_ui(self):
         card_l = QVBoxLayout(self)
-        card_l.setContentsMargins(8, 7, 8, 7)
+        margins = (6, 5, 6, 5) if self.depth > 1 else (8, 7, 8, 7)
+        card_l.setContentsMargins(*margins)
         card_l.setSpacing(4)
 
         # 1. Summary row
@@ -443,13 +469,15 @@ class SubagentCardWidget(QFrame):
 
         role = self.agent_data.get("role") or "Subagent"
         self.lbl_role = QLabel(role, self)
-        self.lbl_role.setStyleSheet("font-size: 11px; font-weight: 700;")
+        role_font_size = "10px" if self.depth > 1 else "11px"
+        self.lbl_role.setStyleSheet(f"font-size: {role_font_size}; font-weight: 700;")
         self.lbl_role.setWordWrap(True)
         name_box.addWidget(self.lbl_role)
 
         sub_type = self.agent_data.get("type") or "子智能体"
         state_str = "运行中" if is_running else "已完成"
-        self.lbl_sub = QLabel(f"{sub_type} · {state_str}", self)
+        depth_tag = f"L{self.depth} · " if self.depth > 1 else ""
+        self.lbl_sub = QLabel(f"{depth_tag}{sub_type} · {state_str}", self)
         self.lbl_sub.setProperty("class", "SubagentSub")
         name_box.addWidget(self.lbl_sub)
         summary_row.addLayout(name_box, 1)
@@ -500,7 +528,7 @@ class SubagentCardWidget(QFrame):
         grid.setSpacing(2)
 
         row0 = QHBoxLayout()
-        row0.addWidget(self._make_label("计费总量 (入+出):"))
+        row0.addWidget(self._make_label("直属计费 (入+出):"))
         row0.addWidget(self._make_val(f"{fmt_tokens(tot_tok)} (${cost:.3f})"))
         grid.addLayout(row0)
 
@@ -530,6 +558,57 @@ class SubagentCardWidget(QFrame):
 
         card_l.addWidget(self.detail_frame)
 
+        # 3. Branch row & nested children (Option A: 树形级联折叠)
+        if self.children_data:
+            def _calc_branch_totals(child_list):
+                tot_t = 0
+                tot_c = 0.0
+                for c in child_list:
+                    tot_t += c.get("totalTokens", 0)
+                    tot_c += c.get("costUsd", 0.0)
+                    if c.get("children"):
+                        st, sc = _calc_branch_totals(c["children"])
+                        tot_t += st
+                        tot_c += sc
+                return tot_t, tot_c
+
+            branch_tok, branch_cost = _calc_branch_totals(self.children_data)
+
+            self.branch_row = QHBoxLayout()
+            self.branch_row.setContentsMargins(2, 2, 0, 0)
+            self.branch_row.setSpacing(6)
+
+            self.lbl_branch_summary = QLabel(
+                f"↳ 派生 {len(self.children_data)} 个子任务 ({fmt_tokens(branch_tok)} · ${branch_cost:.3f})",
+                self
+            )
+            self.lbl_branch_summary.setStyleSheet("font-size: 10px; font-weight: 600; color: #64748b;")
+            self.branch_row.addWidget(self.lbl_branch_summary, 1)
+
+            self.btn_toggle_branch = QPushButton("展开子任务 ▼", self)
+            self.btn_toggle_branch.setProperty("class", "BranchToggleBtn")
+            self.btn_toggle_branch.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+            self.btn_toggle_branch.clicked.connect(self.toggle_branch)
+            self.branch_row.addWidget(self.btn_toggle_branch)
+
+            card_l.addLayout(self.branch_row)
+
+            # Children container (initially hidden)
+            self.children_container = QFrame(self)
+            self.children_container.setObjectName("ChildrenContainer")
+            self.children_container.setProperty("class", "ChildrenContainer")
+            self.children_container.setVisible(False)
+            children_layout = QVBoxLayout(self.children_container)
+            children_layout.setContentsMargins(4, 2, 0, 2)
+            children_layout.setSpacing(4)
+
+            for child_data in self.children_data:
+                child_card = SubagentCardWidget(child_data, self.children_container)
+                self.child_widgets.append(child_card)
+                children_layout.addWidget(child_card)
+
+            card_l.addWidget(self.children_container)
+
     def _make_label(self, text: str) -> QLabel:
         lbl = QLabel(text, self)
         lbl.setProperty("class", "SubagentDetailLabel")
@@ -545,8 +624,28 @@ class SubagentCardWidget(QFrame):
         self.detail_frame.setVisible(new_v)
         self.lbl_chevron.setText("▲" if new_v else "▼")
 
+    def toggle_branch(self):
+        if hasattr(self, 'children_container'):
+            new_v = not self.children_container.isVisible()
+            self.children_container.setVisible(new_v)
+            if hasattr(self, 'btn_toggle_branch'):
+                self.btn_toggle_branch.setText("收起子任务 ▲" if new_v else "展开子任务 ▼")
+
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
+            pos = event.position().toPoint()
+            # If clicked inside children_container or detail_frame, don't toggle accordion
+            if hasattr(self, 'children_container') and self.children_container.isVisible():
+                if self.children_container.geometry().contains(pos):
+                    event.accept()
+                    return
+            if self.detail_frame.isVisible() and self.detail_frame.geometry().contains(pos):
+                event.accept()
+                return
+            child = self.childAt(pos)
+            if child and isinstance(child, QPushButton):
+                event.accept()
+                return
             self.toggle_accordion()
             event.accept()
         else:
@@ -809,14 +908,14 @@ class CapsuleWindow(QWidget):
         # 微仪表盘横条 (Micro-Dashboard)
         self.micro_dashboard = QFrame(self.view_cluster)
         self.micro_dashboard.setObjectName("MicroDashboard")
-        self.micro_dashboard.setToolTip("所有已派生 Subagent 的累计计费 Token 总量 (输入+输出) 与折算费用")
+        self.micro_dashboard.setToolTip("所有已派生 Subagent (含嵌套派生) 的累计计费 Token 总量 (输入+输出) 与折算费用")
         micro_l = QHBoxLayout(self.micro_dashboard)
         micro_l.setContentsMargins(8, 6, 8, 6)
         micro_l.setSpacing(6)
 
         m_metric_box = QVBoxLayout()
         m_metric_box.setSpacing(1)
-        lbl_m_title = QLabel("Subagent 计费消耗", self.micro_dashboard)
+        lbl_m_title = QLabel("Subagent 计费消耗 (含嵌套派生)", self.micro_dashboard)
         lbl_m_title.setStyleSheet("font-size: 9px; color: #64748b; font-weight: 700;")
         m_metric_box.addWidget(lbl_m_title)
 
@@ -1083,7 +1182,7 @@ class CapsuleWindow(QWidget):
             self.val_cost.setText(f"${cum_cost:.3f} (计费 {fmt_tokens(cum_billed)})")
 
         # 5. 更新 Subagents Tab 徽章与微仪表盘
-        sub_count = len(subagents)
+        sub_count = cluster.get("totalCount", len(cluster.get("allSubagents", [])) or len(subagents))
         running_cnt = cluster.get("runningCount", cluster.get("activeCount", 0))
         done_cnt = cluster.get("doneCount", cluster.get("completedCount", 0))
         cluster_tokens = cluster.get("totalTokens", 0)

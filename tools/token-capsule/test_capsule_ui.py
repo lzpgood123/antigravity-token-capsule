@@ -309,3 +309,141 @@ def test_drag_isolation_and_teleport_prevention(window):
     # Window position must not teleport or change
     assert window.pos() == initial_pos
 
+def test_hierarchical_tree_rendering_and_branch_toggle(window):
+    """Verifies Option A hierarchical tree cards, branch summary calculation, and expandable children container."""
+    l2_child1 = {
+        "id": "l2-child-0001",
+        "parentId": "l1-root-0001",
+        "depth": 2,
+        "role": "Backend Scout",
+        "type": "researcher",
+        "state": "running",
+        "totalTokens": 20000,
+        "costUsd": 0.024,
+        "promptTokens": 18000,
+        "candidateTokens": 2000,
+        "thinkingTokens": 400,
+        "cachedTokens": 12000,
+        "ttft": 0.28,
+        "speed": 62.0,
+        "lastAction": "正在搜索架构代码...",
+        "children": []
+    }
+    l2_child2 = {
+        "id": "l2-child-0002",
+        "parentId": "l1-root-0001",
+        "depth": 2,
+        "role": "Frontend Scout",
+        "type": "developer",
+        "state": "done",
+        "totalTokens": 30000,
+        "costUsd": 0.036,
+        "promptTokens": 26000,
+        "candidateTokens": 4000,
+        "thinkingTokens": 600,
+        "cachedTokens": 18000,
+        "ttft": 0.32,
+        "speed": 75.0,
+        "lastAction": "已完成组件构建",
+        "children": []
+    }
+    l1_root = {
+        "id": "l1-root-0001",
+        "parentId": "primary-0001",
+        "depth": 1,
+        "role": "Lead Architect",
+        "type": "architect",
+        "state": "running",
+        "totalTokens": 45000,
+        "costUsd": 0.054,
+        "promptTokens": 40000,
+        "candidateTokens": 5000,
+        "thinkingTokens": 1000,
+        "cachedTokens": 30000,
+        "ttft": 0.40,
+        "speed": 80.0,
+        "lastAction": "协调子任务执行",
+        "children": [l2_child1, l2_child2]
+    }
+
+    cluster = {
+        "totalTokens": 45000 + 20000 + 30000,
+        "totalCostUsd": round(0.054 + 0.024 + 0.036, 3),
+        "combinedCostUsd": 0.200,
+        "totalCount": 3,
+        "runningCount": 2,
+        "doneCount": 1,
+        "activeCount": 2,
+        "completedCount": 1,
+        "subagents": [l1_root],
+        "allSubagents": [l1_root, l2_child1, l2_child2]
+    }
+
+    data = {
+        "conversationId": "primary-0001",
+        "title": "Nested Subagents Session",
+        "autoFollow": True,
+        "activeContext": 20000,
+        "breakdown": {
+            "system": {"tokens": 3200, "pct": 16.0},
+            "tools": {"tokens": 4600, "pct": 23.0},
+            "messages": {"tokens": 6900, "pct": 34.5},
+            "mcp": {"tokens": 1500, "pct": 7.5},
+            "skills": {"tokens": 3800, "pct": 19.0}
+        },
+        "turn": {},
+        "cumulative": {"costUsd": 0.086, "billedTokens": 20000},
+        "cluster": cluster
+    }
+
+    window.update_data(data)
+
+    # 1. Total count badge must reflect all 3 subagents
+    assert "3" in window.btn_tab_cluster.text()
+    assert "共 3 个 Subagent" in window.lbl_wing_count.text()
+    assert "95.0k" in window.micro_metric_val.text()
+
+    # 2. Only 1 root card in list layout
+    assert len(window.subagent_cards) == 1
+    root_card = window.subagent_cards[0]
+    assert root_card.depth == 1
+    assert "Lead Architect" in root_card.lbl_role.text()
+
+    # 3. Option A: Branch row must exist
+    assert hasattr(root_card, "branch_row")
+    assert hasattr(root_card, "btn_toggle_branch")
+    assert hasattr(root_card, "children_container")
+    assert "↳ 派生 2 个子任务" in root_card.lbl_branch_summary.text()
+    # Branch totals = 20k + 30k = 50.0k
+    assert "50.0k" in root_card.lbl_branch_summary.text()
+
+    # 4. Children container initially hidden (switch to cluster tab so view_cluster is visible)
+    window.switch_tab("cluster")
+    assert root_card.children_container.isVisible() is False
+    assert "展开子任务 ▼" in root_card.btn_toggle_branch.text()
+
+    # 5. Toggle branch expansion
+    root_card.toggle_branch()
+    assert root_card.children_container.isVisible() is True
+    assert "收起子任务 ▲" in root_card.btn_toggle_branch.text()
+
+    # 6. Verify nested child cards inside children_container
+    assert len(root_card.child_widgets) == 2
+    c1, c2 = root_card.child_widgets
+    assert c1.depth == 2
+    assert "Backend Scout" in c1.lbl_role.text()
+    assert "L2 ·" in c1.lbl_sub.text()
+    assert "20.0k" in c1.lbl_tok.text()
+
+    assert c2.depth == 2
+    assert "Frontend Scout" in c2.lbl_role.text()
+    assert "L2 ·" in c2.lbl_sub.text()
+    assert "30.0k" in c2.lbl_tok.text()
+
+    # 7. Independent accordion expansion in nested child card
+    assert c1.detail_frame.isVisible() is False
+    c1.toggle_accordion()
+    assert c1.detail_frame.isVisible() is True
+    assert root_card.detail_frame.isVisible() is False  # parent accordion unaffected
+
+
