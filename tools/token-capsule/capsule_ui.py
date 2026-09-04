@@ -569,10 +569,13 @@ class CapsuleWindow(QWidget):
         self.max_context = 256_000
         self.latest_data = {}
 
-        # 加载设置：主题与布局模式
+        # 加载设置：主题与布局模式 (首次启动严格默认采用 compact 紧凑单卡)
         saved_settings = load_saved_settings()
         self.current_theme = saved_settings.get("theme", "light")
-        self.layout_mode = default_layout_mode if default_layout_mode else saved_settings.get("layout_mode", "compact")
+        if default_layout_mode is not None:
+            self.layout_mode = default_layout_mode
+        else:
+            self.layout_mode = saved_settings.get("layout_mode", "compact")
         self.active_tab = "primary"  # "primary" or "cluster"
         self.subagent_cards = []
 
