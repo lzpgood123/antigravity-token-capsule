@@ -89,21 +89,6 @@ Multi-context repository layout guided by root `CONTEXT-MAP.md`. Tool-scoped dom
 
 ---
 
-## 🚫 流程规范：禁用内置 Planning 机制与启用 Spec-Driven Dev
-
-### 1. 禁用 IDE 内置轻量级 Planning 机制
-* **严禁生成内置 Plan 工件**：Agent 严禁自动创建或请求用户批准 `<planning_mode>` 自带的 `implementation_plan.md` 与 `walkthrough.md` 伪计划工件，禁止以此类轻量级文件替代严谨的工程设计。
-* **禁止无谓阻塞挂起**：严禁在未触发正式 Spec 流程时擅自挂起并等待用户点击 "Proceed/Approve"。
-
-### 2. 正式功能开发严格遵循 `/spec-driven-dev`
-当用户启动新工具研发、重大功能迭代、或显式要求规范流程时，**必须 100% 严格执行** [`spec-driven-dev`](file:///C:/Users/lzpgood/.gemini/config/skills/spec-driven-dev/SKILL.md) 六阶段门禁体系：
-* **Phase 0 (Bootstrap)**：维护 `.specify/memory/constitution.md`、`AGENTS.md` 与 `CONTEXT.md` 领域字典；
-* **Phase 1 (Requirements Discovery)**：通过 `/grill-me` 深度对抗对齐需求，运行 `/speckit-specify` 产出 `specs/<feature>/spec.md`（仅限 WHAT/WHY，不涉及技术实现）；
-* **Phase 2 (Design Exploration)**：若有技术不确定性先做 `/prototype` 原型，随后产出 `specs/<feature>/plan.md` 并通过宪法审查；
-* **Phase 3 (Task Engineering)**：通过 `/speckit-tasks` 产出具备依赖排序的 `specs/<feature>/tasks.md`，运行 `/speckit-analyze` 进行跨工件一致性校验；
-* **Phase 4 (TDD Implementation)**：对每个原子任务严格贯彻 **RED**（先写失败单测） $\to$ **GREEN**（最小代码通过） $\to$ **REFACTOR**（重构保持绿色）；
-* **Phase 5 (Verify & Converge)**：两轴（规范与规格）并行 Review，并通过 `/speckit-converge` 闭环核验；
-* **Phase 6 (Commit & Handoff)**：遵循作用域约定式提交并生成交接文档。
-
-### 3. 日常指令快速通道 (Direct / Fast Path)
-对于轻量缺陷修复、代码/日志诊断、说明文档编写、样式微调等单点指令，直接执行，迅速交付，不强加繁重仪式。
+## 🚫 流程规范：禁用内置 Planning 机制
+* **严禁生成内置 Plan 工件**：Agent 严禁自动创建或请求用户批准 `<planning_mode>` 自带的 `implementation_plan.md` 与 `walkthrough.md` 伪计划工件。
+* **禁止无谓阻塞挂起**：严禁在未得到用户显式要求时擅自挂起并等待用户点击 "Proceed/Approve"。
