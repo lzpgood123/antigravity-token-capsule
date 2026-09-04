@@ -92,3 +92,12 @@ Multi-context repository layout guided by root `CONTEXT-MAP.md`. Tool-scoped dom
 ## 🚫 流程规范：禁用内置 Planning 机制
 * **严禁生成内置 Plan 工件**：Agent 严禁自动创建或请求用户批准 `<planning_mode>` 自带的 `implementation_plan.md` 与 `walkthrough.md` 伪计划工件。
 * **禁止无谓阻塞挂起**：严禁在未得到用户显式要求时擅自挂起并等待用户点击 "Proceed/Approve"。
+
+---
+
+## 🐛 人类用户 Bug 反馈响应守则 (Human-Friendly Bug Triage & Fix)
+
+* **精准理解人类大白话**：当人类用户以截图、口头描述、非技术语言（如“显示歪了”、“数据对不上”、“这里崩了”）反馈 Bug 时，Agent 必须自主结合上下文与源码逆向推导技术根因，**严禁反过来要求用户提供专业错误堆栈、代码定位或技术黑话**。
+* **直接下刀排障，严禁生成伪计划**：坚决贯彻禁用内置 Plan 的原则，不得生成 `implementation_plan.md`，不得以“请确认我的计划”为由无谓中断挂起。直接定位目标文件，编写针对性复现测试并修复。
+* **自动化闭环交付**：修复完成后，必须执行测试验证，并自动提炼出符合规范的作用域 Conventional Commit（例如 `fix(token-capsule): 修复集群区域显示错位与Subagent状态同步异常`），做到“人类大白话吐槽，Agent 全自动搞定”。
+

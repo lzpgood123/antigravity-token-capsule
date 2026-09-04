@@ -110,6 +110,27 @@ def main():
         theme_group.addAction(act_theme)
         theme_menu.addAction(act_theme)
 
+    # 📐 布局模式切换子菜单 (单卡方案 A vs 双翼方案 C)
+    layout_menu = menu.addMenu("📐 布局模式")
+    layout_group = QActionGroup(menu)
+    layout_group.setExclusive(True)
+
+    act_compact = QAction("紧凑单卡", layout_menu, checkable=True)
+    act_dual = QAction("展开双翼", layout_menu, checkable=True)
+
+    if window.layout_mode == "dual_wing":
+        act_dual.setChecked(True)
+    else:
+        act_compact.setChecked(True)
+
+    act_compact.triggered.connect(lambda: window.set_layout_mode("compact"))
+    act_dual.triggered.connect(lambda: window.set_layout_mode("dual_wing"))
+
+    layout_group.addAction(act_compact)
+    layout_group.addAction(act_dual)
+    layout_menu.addAction(act_compact)
+    layout_menu.addAction(act_dual)
+
     menu.addSeparator()
 
     act_ontop = QAction("窗口总在最前", menu, checkable=True)
@@ -128,7 +149,8 @@ def main():
     act_reset = QAction("重置位置到右上角", menu)
     def reset_pos():
         screen = app.primaryScreen().availableGeometry()
-        window.move(screen.width() - 330, 50)
+        w = 690 if window.layout_mode == "dual_wing" else 330
+        window.move(screen.width() - w, 50)
         window.show()
     act_reset.triggered.connect(reset_pos)
     menu.addAction(act_reset)
