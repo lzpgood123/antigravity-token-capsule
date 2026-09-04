@@ -9,15 +9,19 @@ echo.
 
 cd /d "%~dp0"
 
-:: 1. 激活 Python 解释器
+:: 1. 终止旧实例防止文件占用
+taskkill /f /im token-capsule.exe >nul 2>nul
+timeout /t 1 /nobreak >nul
+
+:: 2. 激活 Python 解释器
 if exist ".venv\Scripts\activate.bat" (
-    echo [INFO] Activating local virtual environment (.venv)...
+    echo [INFO] Activating local virtual environment .venv...
     call .venv\Scripts\activate.bat
 ) else (
     echo [INFO] Using global Python interpreter...
 )
 
-:: 2. 检查依赖
+:: 3. 检查依赖
 python -c "import PySide6, PyInstaller, PIL" 2>nul
 if errorlevel 1 (
     echo [WARN] Missing required dependencies. Installing...
@@ -29,18 +33,22 @@ if errorlevel 1 (
     )
 )
 
-:: 3. 确保图标存在
+:: 4. 确保图标存在
 if not exist "capsule.ico" (
-    echo [INFO] Generating custom capsule icon (capsule.ico)...
+    echo [INFO] Generating custom capsule icon capsule.ico...
     python generate_icon.py
 )
+
+:: 清理旧 spec 避免干扰
+if exist "token-capsule.spec" del /f /q "token-capsule.spec"
 
 echo.
 echo [1/4] Compiling Standalone Single-File EXE (--onefile)...
 pyinstaller --noconsole --onefile --clean -y ^
     --name "token-capsule" ^
-    --icon "capsule.ico" ^
+    --icon "%~dp0capsule.ico" ^
     --add-data "%~dp0capsule.ico;." ^
+    --specpath "build/onefile" ^
     --workpath "build/onefile" ^
     --distpath "dist/onefile" ^
     main.py
@@ -53,16 +61,25 @@ if errorlevel 1 (
 
 echo.
 echo [2/4] Compiling Portable Directory EXE (--onedir)...
+if exist "dist\onedir" rmdir /s /q "dist\onedir" 2>nul
 pyinstaller --noconsole --onedir --clean -y ^
     --name "token-capsule" ^
-    --icon "capsule.ico" ^
+    --icon "%~dp0capsule.ico" ^
     --add-data "%~dp0capsule.ico;." ^
+    --specpath "build/onedir" ^
     --workpath "build/onedir" ^
     --distpath "dist/onedir" ^
     main.py
 
 if errorlevel 1 (
     echo [ERROR] Directory build failed!
+    pause
+    exit /b 1
+)
+
+:: 校验 onedir 内置 Python 解释器完整性
+if not exist "dist\onedir\token-capsule\_internal\base_library.zip" (
+    echo [ERROR] Critical verification failed: _internal\base_library.zip is missing!
     pause
     exit /b 1
 )
