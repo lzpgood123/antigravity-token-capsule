@@ -219,19 +219,24 @@ The tool follows a self-contained layout:
 
 ```
 token-capsule/
+├── src/                      # Core business modules
+│   ├── capsule_ui.py         # PySide6 floating window, 5-theme engine & foldable cards
+│   ├── data_engine.py        # CDP sniffer, SQLite WAL polling & telemetry engine
+│   ├── proto_decoder.py      # Pure Python zero-dependency Protobuf decoder
+│   └── generate_icon.py      # Multi-resolution capsule.ico generation script
+├── tests/                    # Unit test suite
+│   ├── test_capsule_ui.py    # UI rendering & mouse interaction tests
+│   ├── test_data_engine.py   # CDP sniffer & SQLite usage tests
+│   └── test_settings.py      # Settings persistence tests
+├── docs/                     # Documentation & visual assets
+│   ├── images/               # High-res tour screenshots
+│   └── adr/                  # Architectural Decision Records (ADR)
 ├── main.py                   # Application entry point, tray menu & autostart registry
-├── capsule_ui.py             # PySide6 floating window, 5-theme engine & foldable cards
-├── data_engine.py            # CDP sniffer, SQLite WAL polling & telemetry engine
-├── proto_decoder.py          # Pure Python zero-dependency Protobuf decoder
-├── generate_icon.py          # Script generating multi-resolution capsule.ico
-├── build_exe.bat             # Automated PyInstaller dual-mode build script
-├── start_capsule.bat         # Console startup script
-├── start_capsule_silent.vbs  # Silent VBS startup launcher
 ├── requirements.txt          # Python dependencies
+├── build_exe.bat             # Automated multi-target packaging script
 ├── installer.iss             # Inno Setup 6 installer script
-└── docs/                     # Documentation & assets
-    ├── images/               # High-res tour screenshots
-    └── adr/                  # Architectural Decision Records (ADR)
+├── start_capsule.bat         # Console startup script
+└── start_capsule_silent.vbs  # Silent VBS startup launcher
 ```
 
 ---

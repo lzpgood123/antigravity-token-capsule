@@ -36,7 +36,7 @@ if errorlevel 1 (
 :: 4. 确保图标存在
 if not exist "capsule.ico" (
     echo [INFO] Generating custom capsule icon capsule.ico...
-    python generate_icon.py
+    python src/generate_icon.py
 )
 
 :: 清理旧 spec 避免干扰
@@ -48,6 +48,7 @@ pyinstaller --noconsole --onefile --clean -y ^
     --name "token-capsule" ^
     --icon "%~dp0capsule.ico" ^
     --add-data "%~dp0capsule.ico;." ^
+    --paths "%~dp0src" ^
     --specpath "build/onefile" ^
     --workpath "build/onefile" ^
     --distpath "dist/onefile" ^
@@ -66,6 +67,7 @@ pyinstaller --noconsole --onedir --clean -y ^
     --name "token-capsule" ^
     --icon "%~dp0capsule.ico" ^
     --add-data "%~dp0capsule.ico;." ^
+    --paths "%~dp0src" ^
     --specpath "build/onedir" ^
     --workpath "build/onedir" ^
     --distpath "dist/onedir" ^

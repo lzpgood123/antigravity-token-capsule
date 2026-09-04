@@ -219,19 +219,24 @@ build_exe.bat
 
 ```
 token-capsule/
+├── src/                      # 核心业务模块
+│   ├── capsule_ui.py         # PySide6 悬浮胶囊窗体绘制、5套主题引擎与折叠卡片组件
+│   ├── data_engine.py        # CDP 探针、SQLite 只读轮询与指标聚合引擎
+│   ├── proto_decoder.py      # 纯 Python 独立 Protobuf 解码器 (零外部依赖)
+│   └── generate_icon.py      # 自动渲染生成多尺寸 capsule.ico 图标
+├── tests/                    # 单元测试套件
+│   ├── test_capsule_ui.py    # UI 渲染与交互测试
+│   ├── test_data_engine.py   # 数据与 CDP 状态同步测试
+│   └── test_settings.py      # 配置持久化测试
+├── docs/                     # 架构决策记录与高清配图资产
+│   ├── images/               # 7 张高清产品功能巡礼截图
+│   └── adr/                  # 核心技术架构决策记录 (ADR)
 ├── main.py                   # Qt 应用程序主入口、托盘右键菜单与自启注册表管理
-├── capsule_ui.py             # PySide6 悬浮胶囊窗体绘制、5套主题引擎与折叠卡片组件
-├── data_engine.py            # CDP 探针、SQLite 只读轮询与指标聚合引擎
-├── proto_decoder.py          # 纯 Python 独立 Protobuf 解码器 (零外部依赖)
-├── generate_icon.py          # 自动渲染生成 capsule.ico 图标
-├── build_exe.bat             # 一键 PyInstaller 双模式打包脚本
-├── start_capsule.bat         # 控制台启动入口
-├── start_capsule_silent.vbs  # 无黑框后台静默启动入口
 ├── requirements.txt          # Python 依赖清单
-├── installer.iss             # Inno Setup 6 安装包配置脚本
-└── docs/                     # 架构决策记录与高清配图资产
-    ├── images/               # 7 张高清产品功能巡礼截图
-    └── adr/                  # 核心技术架构决策记录 (ADR)
+├── build_exe.bat             # 一键自动化多产物构建脚本
+├── installer.iss             # Inno Setup 6 安装包编译配置
+├── start_capsule.bat         # 控制台启动入口
+└── start_capsule_silent.vbs  # 无黑框后台静默启动入口
 ```
 
 ---

@@ -14,8 +14,10 @@ else:
     base_dir = os.path.dirname(os.path.abspath(__file__))
     app_exe = f'"{sys.executable}" "{os.path.abspath(__file__)}"'
 
-if base_dir not in sys.path:
-    sys.path.insert(0, base_dir)
+src_dir = os.path.join(base_dir, "src")
+for p in [base_dir, src_dir]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
 
 from data_engine import DataEngine
 from capsule_ui import CapsuleWindow, THEME_CONFIGS
