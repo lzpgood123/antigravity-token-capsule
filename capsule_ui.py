@@ -293,6 +293,35 @@ QScrollArea#SubagentScrollArea > QWidget > QWidget {{
     background: transparent;
 }}
 
+/* Sleek overlay scrollbar */
+QScrollBar:vertical {{
+    background: transparent;
+    width: 5px;
+    margin: 2px 1px 2px 0px;
+    border: none;
+}}
+
+QScrollBar::handle:vertical {{
+    background: {cfg['sep_bg']};
+    border-radius: 2px;
+    min-height: 20px;
+}}
+
+QScrollBar::handle:vertical:hover {{
+    background: {cfg['accent']};
+}}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+    height: 0px;
+    background: none;
+    border: none;
+}}
+
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
+    background: none;
+    border: none;
+}}
+
 QLabel.SubagentSub {{
     font-size: 9px;
     color: {cfg['text_sub']};
@@ -415,6 +444,7 @@ class SubagentCardWidget(QFrame):
         role = self.agent_data.get("role") or "Subagent"
         self.lbl_role = QLabel(role, self)
         self.lbl_role.setStyleSheet("font-size: 11px; font-weight: 700;")
+        self.lbl_role.setWordWrap(True)
         name_box.addWidget(self.lbl_role)
 
         sub_type = self.agent_data.get("type") or "子智能体"
@@ -782,10 +812,11 @@ class CapsuleWindow(QWidget):
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.scroll_area.setMinimumHeight(300)
 
         self.scroll_content = QWidget()
         self.subagent_list_layout = QVBoxLayout(self.scroll_content)
-        self.subagent_list_layout.setContentsMargins(0, 0, 0, 0)
+        self.subagent_list_layout.setContentsMargins(0, 0, 6, 0)
         self.subagent_list_layout.setSpacing(6)
         self.subagent_list_layout.addStretch()
 
@@ -866,6 +897,8 @@ class CapsuleWindow(QWidget):
         if mode == "compact":
             self.setFixedWidth(320)
             self.card_frame.setFixedWidth(320)
+            self.view_primary.setMinimumHeight(380)
+            self.view_cluster.setMinimumHeight(380)
             self.tab_bar.setVisible(True)
             self.wing_divider.setVisible(False)
             self.lbl_wing_primary.setVisible(False)
@@ -883,6 +916,8 @@ class CapsuleWindow(QWidget):
 
             self.setFixedWidth(680)
             self.card_frame.setFixedWidth(680)
+            self.view_primary.setMinimumHeight(380)
+            self.view_cluster.setMinimumHeight(380)
             self.tab_bar.setVisible(False)
             self.wing_divider.setVisible(True)
             self.lbl_wing_primary.setVisible(True)

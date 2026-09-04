@@ -246,3 +246,22 @@ def test_cluster_tab_and_pill_indicator_behaviors(window):
     window.update_data(data_with_sub)
     assert window.btn_tab_cluster.isEnabled() is True
     assert "🤖1" in window.pill_info.text()
+
+def test_cluster_view_height_stability(window):
+    """Tests that switching to cluster tab does not collapse window height and maintains scroll area minimum height."""
+    data = make_sample_data(with_subagents=True)
+    window.update_data(data)
+    window.set_layout_mode("compact")
+
+    # Primary tab height
+    window.switch_tab("primary")
+    primary_h = window.height()
+
+    # Switch to cluster tab
+    window.switch_tab("cluster")
+    cluster_h = window.height()
+
+    # Must NOT collapse into a tiny window (must maintain at least 380px)
+    assert cluster_h >= 380
+    assert window.scroll_area.minimumHeight() >= 300
+    assert abs(primary_h - cluster_h) < 100
