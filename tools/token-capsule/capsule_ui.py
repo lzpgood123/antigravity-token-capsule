@@ -252,6 +252,10 @@ QPushButton.TabBtn:hover {{
     color: {cfg['text_main']};
 }}
 
+QPushButton.TabBtn:disabled {{
+    color: {cfg['border']};
+}}
+
 /* Micro Dashboard Banner */
 QFrame#MicroDashboard {{
     background-color: {cfg['combo_bg']};
@@ -287,6 +291,34 @@ QScrollArea#SubagentScrollArea {{
 
 QScrollArea#SubagentScrollArea > QWidget > QWidget {{
     background: transparent;
+}}
+
+QLabel.SubagentSub {{
+    font-size: 9px;
+    color: {cfg['text_sub']};
+}}
+
+QLabel.SubagentDetailLabel {{
+    font-size: 10px;
+    color: {cfg['text_sub']};
+}}
+
+QLabel.SubagentDetailVal {{
+    font-size: 10px;
+    font-weight: 600;
+    color: {cfg['text_main']};
+}}
+
+QLabel.SubagentAction {{
+    font-size: 9px;
+    color: {cfg['text_sub']};
+    margin-top: 2px;
+}}
+
+QLabel#SubagentCost {{
+    font-size: 10px;
+    font-weight: 600;
+    color: {cfg['cost_color']};
 }}
 
 QLabel.ItemLabel, QLabel[class="ItemLabel"] {{
@@ -388,7 +420,7 @@ class SubagentCardWidget(QFrame):
         sub_type = self.agent_data.get("type") or "子智能体"
         state_str = "运行中" if is_running else "已完成"
         self.lbl_sub = QLabel(f"{sub_type} · {state_str}", self)
-        self.lbl_sub.setStyleSheet("font-size: 9px; color: #64748b;")
+        self.lbl_sub.setProperty("class", "SubagentSub")
         name_box.addWidget(self.lbl_sub)
         summary_row.addLayout(name_box, 1)
 
@@ -401,11 +433,11 @@ class SubagentCardWidget(QFrame):
         summary_row.addWidget(self.lbl_tok)
 
         self.lbl_cost = QLabel(f"${cost:.3f}", self)
-        self.lbl_cost.setStyleSheet("font-size: 10px; font-weight: 600; color: #d97706;")
+        self.lbl_cost.setObjectName("SubagentCost")
         summary_row.addWidget(self.lbl_cost)
 
         self.lbl_chevron = QLabel("▼", self)
-        self.lbl_chevron.setStyleSheet("font-size: 9px; color: #64748b;")
+        self.lbl_chevron.setProperty("class", "SubagentSub")
         summary_row.addWidget(self.lbl_chevron)
 
         card_l.addLayout(summary_row)
@@ -449,19 +481,19 @@ class SubagentCardWidget(QFrame):
         last_action = self.agent_data.get("lastAction") or ("运行中..." if is_running else "已完成任务")
         self.lbl_action = QLabel(f"⚡ {last_action}", self)
         self.lbl_action.setWordWrap(True)
-        self.lbl_action.setStyleSheet("font-size: 9px; color: #64748b; margin-top: 2px;")
+        self.lbl_action.setProperty("class", "SubagentAction")
         detail_l.addWidget(self.lbl_action)
 
         card_l.addWidget(self.detail_frame)
 
     def _make_label(self, text: str) -> QLabel:
         lbl = QLabel(text, self)
-        lbl.setStyleSheet("font-size: 10px; color: #64748b;")
+        lbl.setProperty("class", "SubagentDetailLabel")
         return lbl
 
     def _make_val(self, text: str) -> QLabel:
         lbl = QLabel(text, self)
-        lbl.setStyleSheet("font-size: 10px; font-weight: 600;")
+        lbl.setProperty("class", "SubagentDetailVal")
         return lbl
 
     def toggle_accordion(self):
@@ -525,6 +557,20 @@ class CapsuleWindow(QWidget):
             self.pill_sep.setStyleSheet(f"color: {cfg['border']}; font-size: 11px;")
         if hasattr(self, 'pill_sep2'):
             self.pill_sep2.setStyleSheet(f"color: {cfg['border']}; font-size: 11px;")
+        if hasattr(self, 'wing_divider'):
+            self.wing_divider.setStyleSheet(f"background-color: {cfg['sep_bg']}; width: 1px;")
+        if hasattr(self, 'lbl_wing_primary'):
+            self.lbl_wing_primary.setStyleSheet(f"font-size: 11px; font-weight: 700; color: {cfg['accent']};")
+        if hasattr(self, 'lbl_wing_cluster'):
+            self.lbl_wing_cluster.setStyleSheet(f"font-size: 11px; font-weight: 700; color: {cfg['accent']};")
+        if hasattr(self, 'lbl_wing_count'):
+            self.lbl_wing_count.setStyleSheet(f"font-size: 10px; color: {cfg['text_sub']};")
+        if hasattr(self, 'empty_cluster_lbl'):
+            self.empty_cluster_lbl.setStyleSheet(f"font-size: 11px; color: {cfg['text_sub']}; padding: 20px 0;")
+        if hasattr(self, 'lbl_global_title'):
+            self.lbl_global_title.setStyleSheet(f"font-size: 11px; font-weight: 600; color: {cfg['text_sub']};")
+        if hasattr(self, 'lbl_global_val'):
+            self.lbl_global_val.setStyleSheet(f"font-size: 12px; font-weight: 800; color: {cfg['cost_color']};")
 
         if hasattr(self, 'lbl_hero_pct') and hasattr(self, 'latest_data'):
             ctx = self.latest_data.get("activeContext", 0)
@@ -984,8 +1030,12 @@ class CapsuleWindow(QWidget):
 
         if sub_count > 0:
             self.btn_tab_cluster.setText(f"🤖 智能体集群 • {sub_count}")
+            self.btn_tab_cluster.setEnabled(True)
         else:
             self.btn_tab_cluster.setText("🤖 智能体集群")
+            self.btn_tab_cluster.setEnabled(False)
+            if self.active_tab == "cluster":
+                self.switch_tab("primary")
 
         self.micro_metric_val.setText(f"{fmt_tokens(cluster_tokens)} · ${cluster_cost:.3f}")
         self.micro_status_pill.setText(f"🟢 {running_cnt} 运行 · ⚪ {done_cnt} 完成")
@@ -1013,7 +1063,10 @@ class CapsuleWindow(QWidget):
                 self.subagent_list_layout.insertWidget(self.subagent_list_layout.count() - 1, card)
 
         # 7. 收起迷你药丸态
-        self.pill_info.setText(f"{ctx_pct:.1f}% 上下文")
+        pill_text = f"{ctx_pct:.1f}% 上下文"
+        if running_cnt > 0:
+            pill_text += f" · 🤖{running_cnt}"
+        self.pill_info.setText(pill_text)
         if turn_ttft > 0 and turn_speed > 0:
             self.pill_perf.setText(f"{turn_ttft:.1f}s · {turn_speed:.0f}t/s")
             self.pill_perf.setVisible(True)
@@ -1052,8 +1105,17 @@ class CapsuleWindow(QWidget):
 
     def toggle_mode(self):
         self.is_expanded = not self.is_expanded
-        self.card_frame.setVisible(self.is_expanded)
-        self.pill_frame.setVisible(not self.is_expanded)
+        if not self.is_expanded:
+            self.card_frame.setVisible(False)
+            self.pill_frame.setVisible(True)
+            self.setMinimumWidth(0)
+            self.setMaximumWidth(16777215)
+        else:
+            self.card_frame.setVisible(True)
+            self.pill_frame.setVisible(False)
+            target_w = 680 if self.layout_mode == "dual_wing" else 320
+            self.setFixedWidth(target_w)
+            self.card_frame.setFixedWidth(target_w)
         self.adjustSize()
 
     def mousePressEvent(self, event):

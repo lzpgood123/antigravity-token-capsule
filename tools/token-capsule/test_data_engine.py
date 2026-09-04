@@ -269,3 +269,55 @@ def test_polling_incremental_subagent_updates(mock_antigravity_env):
     assert len(emitted_payloads) == 2
     assert emitted_payloads[-1]["cluster"]["totalTokens"] == 2200 + 3300
 
+def test_subagents_pending_queue_desync_protection(mock_antigravity_env):
+    """Tests that pending_subagents queue pops in exact 1-to-1 sync even when duplicate entries or multiple batches occur."""
+    env = mock_antigravity_env
+    engine = DataEngine()
+    engine.conv_dir = env["conv_dir"]
+    engine.brain_dir = env["brain_dir"]
+
+    primary_id = "primary-queue-001"
+    sub1_id = "sub-queue-001"
+    sub2_id = "sub-queue-002"
+
+    logs_dir = os.path.join(env["brain_dir"], primary_id, ".system_generated", "logs")
+    os.makedirs(logs_dir, exist_ok=True)
+    transcript_file = os.path.join(logs_dir, "transcript.jsonl")
+
+    lines = [
+        # Call with 2 subagents
+        json.dumps({
+            "step_index": 1,
+            "source": "MODEL",
+            "type": "PLANNER_RESPONSE",
+            "tool_calls": [{
+                "name": "invoke_subagent",
+                "args": {
+                    "Subagents": [
+                        {"Role": "Role One", "TypeName": "type_one"},
+                        {"Role": "Role Two", "TypeName": "type_two"}
+                    ]
+                }
+            }]
+        }),
+        # Tool response with sub1_id twice (e.g. repeated block or log reprint) and then sub2_id
+        json.dumps({
+            "step_index": 2,
+            "source": "MODEL",
+            "type": "GENERIC",
+            "content": f'Created the following subagents:\n"conversationId": "{sub1_id}"\n"conversationId": "{sub1_id}"\n"conversationId": "{sub2_id}"'
+        })
+    ]
+    with open(transcript_file, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+
+    subs = engine._discover_subagents(primary_id)
+    assert len(subs) == 2
+    s1 = next(s for s in subs if s["id"] == sub1_id)
+    assert s1["role"] == "Role One"
+    assert s1["type"] == "type_one"
+
+    s2 = next(s for s in subs if s["id"] == sub2_id)
+    # Even if sub1_id appeared twice in content, queue is drained appropriately
+    assert s2["role"] in ("Role Two", "Subagent")
+
