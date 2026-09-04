@@ -14,6 +14,10 @@
 
 </div>
 
+<p align="center">
+  <img src="docs/images/01-hero-antigravity.png" alt="Antigravity Token Capsule Hero Showcase" width="100%" />
+</p>
+
 ---
 
 ## 💡 Why Token Capsule?
@@ -53,6 +57,37 @@ When developing with **Google Antigravity**, developers frequently encounter the
   * **System Tray Ecosystem**: Right-click tray icon to toggle Windows startup (HKCU registry), keep window always-on-top, reset position to the top-right corner, or exit cleanly.
 * 📦 **Standalone Windows Executable**  
   Ships as a pre-compiled standalone binary (`token-capsule.exe`). No Python runtime or package installation required.
+
+---
+
+## 🖼️ Product Tour
+
+<table>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <img src="docs/images/02-capsule-pill.png" alt="Ultra-Compact Floating Pill" width="100%" />
+      <br />
+      <sub><b>Ultra-Compact Floating Pill</b><br />Frameless, translucent floating widget docked unobtrusively in your workspace. Drag anywhere with zero clutter while tracking active session tokens and streaming throughput.</sub>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <img src="docs/images/03-telemetry-card.png" alt="5-Segment Telemetry & Cost Breakdown Card" width="100%" />
+      <br />
+      <sub><b>5-Segment Telemetry & Cost Breakdown Card</b><br />Click to expand in-depth telemetry: exact breakdown across System, Tools, Messages, MCP, and Skills, alongside TTFT latency, streaming tok/s, and real-time dollar cost metering.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <img src="docs/images/04-in-situ-expanded.png" alt="In-Situ Antigravity Workspace Integration" width="100%" />
+      <br />
+      <sub><b>In-Situ Antigravity Workspace Integration</b><br />Seamless companion experience floating alongside active agent workflows, locked to your foreground conversation via CDP without session jumping.</sub>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <img src="docs/images/05-tray-menu-themes.png" alt="System Tray Menu & 5-Theme Switcher" width="100%" />
+      <br />
+      <sub><b>System Tray Menu & 5-Theme Switcher</b><br />Hot-switch instantly across 5 curated themes (Pure Light, Obsidian Dark, Frosted Aurora, Matrix Neon, Warm Paper) with startup toggle, window pinning, and quick position reset.</sub>
+    </td>
+  </tr>
+</table>
 
 ---
 

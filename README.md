@@ -14,6 +14,10 @@
 
 </div>
 
+<p align="center">
+  <img src="docs/images/01-hero-antigravity.png" alt="Antigravity Token Capsule 桌面监控全景展示" width="100%" />
+</p>
+
 ---
 
 ## 💡 为什么需要 Token Capsule？
@@ -53,6 +57,37 @@
   * **完善的系统托盘**：右键托盘支持开机自启（注册表托管）、窗口总在最前、位置重置（右上角）与安全退出。
 * 📦 **免 Python 环境独立运行**  
   已预编译为独立单文件可执行文件（`token-capsule.exe`），无需安装 Python 或任何依赖，即拷即用。
+
+---
+
+## 🖼️ 产品功能巡礼 (Product Tour)
+
+<table>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <img src="docs/images/02-capsule-pill.png" alt="极简悬浮药丸形态" width="100%" />
+      <br />
+      <sub><b>极简悬浮药丸形态 (Compact Floating Pill)</b><br />无边框半透明胶囊设计，沉浸式贴附在 IDE 右上角，随心拖拽，零视觉干扰实时呈现当前 Token 概览与当轮生成速率。</sub>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <img src="docs/images/03-telemetry-card.png" alt="五维遥测与财务明细卡片" width="100%" />
+      <br />
+      <sub><b>五维遥测与财务明细卡片 (Telemetry & Cost Card)</b><br />单击展开详细透视看板：System / Tools / Messages / MCP / Skills 5 分段精准拆解、TTFT 首字延迟、当轮与加权均值 tok/s 及实时美元成本换算。</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <img src="docs/images/04-in-situ-expanded.png" alt="IDE 工作区原位协同" width="100%" />
+      <br />
+      <sub><b>IDE 工作区原位协同 (In-Situ Workspace Workflow)</b><br />与 Google Antigravity 界面无缝伴生融合，通过 CDP 协议独占锁定前台活跃会话，无论后台有多少 Agent 并发均不跳变。</sub>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <img src="docs/images/05-tray-menu-themes.png" alt="系统托盘与 5 套主题热切" width="100%" />
+      <br />
+      <sub><b>系统托盘与 5 套主题热切 (System Tray & 5-Theme Switcher)</b><br />纯亮、暗夜、极光、黑客、暖阳 5 大精美主题实时无缝热切，右键托盘支持开机自启、窗口置顶、位置重置与优雅退出。</sub>
+    </td>
+  </tr>
+</table>
 
 ---
 
