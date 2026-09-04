@@ -1,0 +1,181 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- ========================================================= -->
+    <!-- 1. ANTIGRAVITY OFFICIAL SPECTRAL GRADIENTS                -->
+    <!-- ========================================================= -->
+
+    <!-- Base Arch Blue Gradient (Official Google Royal Blue) -->
+    <linearGradient id="baseBlue" x1="50%" y1="20%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#3B82F6"/>
+      <stop offset="35%" stop-color="#2563EB"/>
+      <stop offset="100%" stop-color="#1D4ED8"/>
+    </linearGradient>
+
+    <!-- Right Shoulder Rose/Magenta Warm Transition (Smoother blend) -->
+    <radialGradient id="rightRose" cx="66%" cy="32%" r="44%">
+      <stop offset="0%" stop-color="#FB7185" stop-opacity="0.65"/>
+      <stop offset="45%" stop-color="#818CF8" stop-opacity="0.30"/>
+      <stop offset="100%" stop-color="#2563EB" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Left Lime-Green Radiant Shoulder Glow -->
+    <radialGradient id="leftLime" cx="26%" cy="32%" r="38%">
+      <stop offset="0%" stop-color="#84CC16" stop-opacity="1"/>
+      <stop offset="38%" stop-color="#4ADE80" stop-opacity="0.95"/>
+      <stop offset="70%" stop-color="#10B981" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#2563EB" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Top Solar Coral Orange (Gemini Radiant Crest) -->
+    <radialGradient id="topOrange" cx="51%" cy="10%" r="50%">
+      <stop offset="0%" stop-color="#FF5722" stop-opacity="1"/>
+      <stop offset="35%" stop-color="#F97316" stop-opacity="0.95"/>
+      <stop offset="68%" stop-color="#FB923C" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#3B82F6" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Center Sky Blue Luminous Lift -->
+    <radialGradient id="centerSky" cx="50%" cy="44%" r="24%">
+      <stop offset="0%" stop-color="#60A5FA" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#2563EB" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- ========================================================= -->
+    <!-- 2. TOKEN CAPSULE TELEMETRY GRADIENTS                      -->
+    <!-- ========================================================= -->
+
+    <!-- Capsule Left Chamber: Emerald Green (Prompt / Input Token) -->
+    <linearGradient id="capsuleGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34D399"/>
+      <stop offset="40%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#047857"/>
+    </linearGradient>
+
+    <!-- Capsule Right Chamber: Sapphire Blue (Completion / Output Token) -->
+    <linearGradient id="capsuleBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#60A5FA"/>
+      <stop offset="40%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#1E40AF"/>
+    </linearGradient>
+
+    <!-- Capsule Glass Specular Highlight (Top Reflection) -->
+    <linearGradient id="capsuleGloss" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.85"/>
+      <stop offset="45%" stop-color="#FFFFFF" stop-opacity="0.30"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.0"/>
+    </linearGradient>
+
+    <!-- Capsule Glass Bottom Specular Rim -->
+    <linearGradient id="bottomRimGloss" x1="50%" y1="100%" x2="50%" y2="0%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.32"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.0"/>
+    </linearGradient>
+
+    <!-- Center Seam Core Gradient (Metallic Precision Divider) -->
+    <linearGradient id="seamCore" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="50%" stop-color="#E2E8F0"/>
+      <stop offset="100%" stop-color="#94A3B8"/>
+    </linearGradient>
+
+    <!-- Gravitational Telemetry Aura -->
+    <radialGradient id="telemetryHalo" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#38BDF8" stop-opacity="0.28"/>
+      <stop offset="60%" stop-color="#38BDF8" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#38BDF8" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Telemetry Ring Orbit Gradient -->
+    <linearGradient id="orbitGrad" x1="0%" y1="50%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#10B981" stop-opacity="0.2"/>
+      <stop offset="25%" stop-color="#10B981" stop-opacity="0.8"/>
+      <stop offset="50%" stop-color="#FFFFFF" stop-opacity="0.95"/>
+      <stop offset="75%" stop-color="#3B82F6" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#3B82F6" stop-opacity="0.2"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ========================================================= -->
+  <!-- LAYER 1: SQUIRCLE WHITE CARD & DROP SHADOWS               -->
+  <!-- ========================================================= -->
+  <!-- Multi-step soft drop shadow for cross-platform rendering -->
+  <rect x="36" y="42" width="440" height="440" rx="98" fill="#0F172A" opacity="0.03"/>
+  <rect x="36" y="38" width="440" height="440" rx="98" fill="#0F172A" opacity="0.05"/>
+  <rect x="36" y="34" width="440" height="440" rx="98" fill="#0F172A" opacity="0.07"/>
+  <!-- Pure White Card Face -->
+  <rect x="36" y="32" width="440" height="440" rx="98" fill="#FFFFFF"/>
+  <!-- Crisp Subtle Outer Stroke -->
+  <rect x="36" y="32" width="440" height="440" rx="98" fill="none" stroke="#E2E8F0" stroke-width="1.5"/>
+
+  <!-- ========================================================= -->
+  <!-- LAYER 2: ANTIGRAVITY GAUSSIAN BELL-CURVE ARCH ("A")       -->
+  <!-- ========================================================= -->
+  <g id="AntigravityArch">
+    <!-- Path: mathematically tuned Gaussian curve with outward flared legs -->
+    <!-- Layer 2.1: Base Royal Google Blue -->
+    <path d="M 256 78 C 294 78, 334 132, 348 192 C 362 252, 388 335, 426 388 C 432 396, 422 404, 405 401 C 388 398, 376 382, 350 338 C 328 300, 292 254, 256 254 C 220 254, 184 300, 162 338 C 136 382, 124 398, 107 401 C 90 404, 80 396, 86 388 C 124 335, 150 252, 164 192 C 178 132, 218 78, 256 78 Z"
+          fill="url(#baseBlue)"/>
+    <!-- Layer 2.2: Right Shoulder Rose/Magenta Blush -->
+    <path d="M 256 78 C 294 78, 334 132, 348 192 C 362 252, 388 335, 426 388 C 432 396, 422 404, 405 401 C 388 398, 376 382, 350 338 C 328 300, 292 254, 256 254 C 220 254, 184 300, 162 338 C 136 382, 124 398, 107 401 C 90 404, 80 396, 86 388 C 124 335, 150 252, 164 192 C 178 132, 218 78, 256 78 Z"
+          fill="url(#rightRose)"/>
+    <!-- Layer 2.3: Left Shoulder Lime-Green Radiant Flow -->
+    <path d="M 256 78 C 294 78, 334 132, 348 192 C 362 252, 388 335, 426 388 C 432 396, 422 404, 405 401 C 388 398, 376 382, 350 338 C 328 300, 292 254, 256 254 C 220 254, 184 300, 162 338 C 136 382, 124 398, 107 401 C 90 404, 80 396, 86 388 C 124 335, 150 252, 164 192 C 178 132, 218 78, 256 78 Z"
+          fill="url(#leftLime)"/>
+    <!-- Layer 2.4: Top Apex Solar Coral Orange Sun -->
+    <path d="M 256 78 C 294 78, 334 132, 348 192 C 362 252, 388 335, 426 388 C 432 396, 422 404, 405 401 C 388 398, 376 382, 350 338 C 328 300, 292 254, 256 254 C 220 254, 184 300, 162 338 C 136 382, 124 398, 107 401 C 90 404, 80 396, 86 388 C 124 335, 150 252, 164 192 C 178 132, 218 78, 256 78 Z"
+          fill="url(#topOrange)"/>
+    <!-- Layer 2.5: Center Vault Sky Blue Luminous Accent -->
+    <path d="M 256 78 C 294 78, 334 132, 348 192 C 362 252, 388 335, 426 388 C 432 396, 422 404, 405 401 C 388 398, 376 382, 350 338 C 328 300, 292 254, 256 254 C 220 254, 184 300, 162 338 C 136 382, 124 398, 107 401 C 90 404, 80 396, 86 388 C 124 335, 150 252, 164 192 C 178 132, 218 78, 256 78 Z"
+          fill="url(#centerSky)"/>
+  </g>
+
+  <!-- ========================================================= -->
+  <!-- LAYER 3: TOKEN CAPSULE HERO COMPANION SYSTEM             -->
+  <!-- ========================================================= -->
+  <!-- 3.1 Zero-Gravity Ambient Levitation Shadow -->
+  <ellipse cx="256" cy="386" rx="66" ry="10" fill="#0F172A" opacity="0.08"/>
+  <ellipse cx="256" cy="384" rx="48" ry="6" fill="#0F172A" opacity="0.12"/>
+
+  <!-- 3.2 Gravitational Telemetry Aura -->
+  <ellipse cx="256" cy="332" rx="96" ry="44" fill="url(#telemetryHalo)"/>
+
+  <!-- 3.3 Telemetry Gravitational Orbit Ring -->
+  <ellipse cx="256" cy="332" rx="92" ry="38" fill="none" stroke="url(#orbitGrad)" stroke-width="2.2" opacity="0.85"/>
+  <!-- Telemetry Pulse Orbit Nodes -->
+  <circle cx="164" cy="332" r="3.2" fill="#10B981" opacity="0.85"/>
+  <circle cx="348" cy="332" r="3.2" fill="#3B82F6" opacity="0.85"/>
+  <circle cx="256" cy="294" r="2.5" fill="#FFFFFF" opacity="0.95"/>
+  <circle cx="256" cy="370" r="2.5" fill="#FFFFFF" opacity="0.95"/>
+
+  <!-- 3.4 The Bi-Color Telemetry Energy Capsule -->
+  <!-- Center (256, 332), Width 160, Height 62, Radius 31 -->
+  <g id="CapsuleStructure">
+    <!-- Left Chamber: Emerald Green (Prompt / Input Tokens) -->
+    <path d="M 256 301 L 207 301 A 31 31 0 0 0 176 332 A 31 31 0 0 0 207 363 L 256 363 Z"
+          fill="url(#capsuleGreen)"/>
+
+    <!-- Right Chamber: Sapphire Blue (Completion / Output Tokens) -->
+    <path d="M 256 301 L 305 301 A 31 31 0 0 1 336 332 A 31 31 0 0 1 305 363 L 256 363 Z"
+          fill="url(#capsuleBlue)"/>
+
+    <!-- Bottom Rim Glass Specular Depth -->
+    <path d="M 205 358 L 307 358 C 322 358, 330 354, 330 350 L 182 350 C 182 354, 190 358, 205 358 Z"
+          fill="url(#bottomRimGloss)"/>
+
+    <!-- Top Specular Glass Highlight -->
+    <path d="M 206 304 L 306 304 C 322 304, 330 310, 330 317 C 330 322, 318 326, 302 326 L 210 326 C 194 326, 182 322, 182 317 C 182 310, 190 304, 206 304 Z"
+          fill="url(#capsuleGloss)"/>
+
+    <!-- Center Seam Isolation Ring (Precision Telemetry Separator) -->
+    <rect x="253" y="300" width="6" height="64" rx="3" fill="url(#seamCore)"/>
+    <rect x="255" y="302" width="2" height="60" rx="1" fill="#FFFFFF" opacity="0.95"/>
+
+    <!-- Prompt Chamber Token Indicator: Concentric Telemetry Target Ring -->
+    <circle cx="216" cy="332" r="5" fill="#FFFFFF" opacity="0.95"/>
+    <circle cx="216" cy="332" r="8" fill="none" stroke="#FFFFFF" stroke-width="1.5" opacity="0.65"/>
+
+    <!-- Completion Chamber Token Indicator: Google Gemini 4-Point AI Star -->
+    <path d="M 296 324 C 296 329, 299 332, 304 332 C 299 332, 296 335, 296 340 C 296 335, 293 332, 288 332 C 293 332, 296 329, 296 324 Z"
+          fill="#FFFFFF" opacity="0.95"/>
+  </g>
+</svg>
