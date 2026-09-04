@@ -1,5 +1,6 @@
 # 💊 Antigravity Token 监控胶囊 (Token Capsule)
 
+> 📖 **官方完整双语文档**：[中文版主文档 (README.md)](../../README.md) | [English Documentation (README_EN.md)](../../README_EN.md)
 
 专为 **Google Antigravity** 打造的实时桌面悬浮 Token 监控伴生工具。通过 Chrome DevTools 协议 (CDP) 毫秒级锁定用户正在浏览的活跃会话，实时统计并图形化展示上下文的 5 大分段构成、当前 Token 消耗以及财务计费估算。
 
