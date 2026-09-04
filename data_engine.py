@@ -373,29 +373,33 @@ class DataEngine(QObject):
                     if not content:
                         continue
 
-                    # 过滤终端命令输出、工具改动或异常堆栈等可能包含虚假或旧智能体日志的回显噪音
-                    if "The command exited with code" in content or "Output:\n" in content or "The following changes were made by the" in content:
+                    # 过滤终端输出、日志查看、文件编辑等工具回显噪音
+                    if ("File Path: `" in content or "Task: " in content or "Log: " in content or
+                        "The command exited with code" in content or "Output:\n" in content or
+                        "The following changes were made" in content or "Created file " in content or
+                        "diff_block" in content):
                         continue
 
-                    # 1. 子智能体创建返回
-                    if "Created the following subagents:" in content:
+                    # 1. 子智能体创建返回（必须有对应的 pending_subagents 申请，杜绝误读其他工具日志回显）
+                    if "Created the following subagents:" in content and pending_subagents:
                         raw_cids = re.findall(r'"conversationId":\s*"([^"]+)"', content)
                         cids = []
                         for c in raw_cids:
                             if c != conv_id and not c.startswith("{") and (re.match(r'^[0-9a-fA-F-]{36}$', c) or "sub" in c.lower() or c.startswith("agent-")):
-                                if c not in cids:
+                                if c not in cids and c not in found_map:
                                     cids.append(c)
 
                         for cid in cids:
-                            info = pending_subagents.pop(0) if pending_subagents else {"role": "Subagent", "type": "subagent"}
-                            if cid not in found_map:
-                                found_map[cid] = {
-                                    "id": cid,
-                                    "role": info["role"],
-                                    "type": info["type"],
-                                    "state": "running",
-                                    "lastAction": "运行中..."
-                                }
+                            if not pending_subagents:
+                                break
+                            info = pending_subagents.pop(0)
+                            found_map[cid] = {
+                                "id": cid,
+                                "role": info["role"],
+                                "type": info["type"],
+                                "state": "running",
+                                "lastAction": "运行中..."
+                            }
 
                     # 2. active subagent(s) 状态与最新动作
                     if "active subagent(s):" in content:
@@ -404,6 +408,7 @@ class DataEngine(QObject):
                         if b1 != -1 and b2 != -1:
                             try:
                                 active_list = json.loads(content[b1:b2+1], strict=False)
+                                is_sys = (data.get("source") == "SYSTEM" or data.get("type") == "SYSTEM_MESSAGE")
                                 for item in active_list:
                                     cid = item.get("conversationId")
                                     if cid and cid != conv_id and not cid.startswith("{"):
@@ -412,15 +417,7 @@ class DataEngine(QObject):
                                         role = item.get("role")
                                         sub_type = item.get("type")
                                         state_detail = item.get("stateDetail")
-                                        if cid not in found_map:
-                                            found_map[cid] = {
-                                                "id": cid,
-                                                "role": role or "Subagent",
-                                                "type": sub_type or "subagent",
-                                                "state": mapped_state,
-                                                "lastAction": state_detail or ("已完成" if mapped_state == "done" else "运行中...")
-                                            }
-                                        else:
+                                        if cid in found_map:
                                             if mapped_state == "done":
                                                 found_map[cid]["state"] = "done"
                                             if role and (found_map[cid]["role"] == "Subagent" or not found_map[cid]["role"]):
@@ -429,6 +426,14 @@ class DataEngine(QObject):
                                                 found_map[cid]["type"] = sub_type
                                             if state_detail:
                                                 found_map[cid]["lastAction"] = state_detail
+                                        elif is_sys:
+                                            found_map[cid] = {
+                                                "id": cid,
+                                                "role": role or "Subagent",
+                                                "type": sub_type or "subagent",
+                                                "state": mapped_state,
+                                                "lastAction": state_detail or ("已完成" if mapped_state == "done" else "运行中...")
+                                            }
                             except Exception:
                                 pass
 
