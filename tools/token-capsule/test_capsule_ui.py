@@ -2,7 +2,8 @@ import os
 import sys
 import pytest
 from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QPointF, QEvent
+from PySide6.QtGui import QMouseEvent
 
 # Ensure tools/token-capsule is in python path
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -124,9 +125,10 @@ def test_data_update_without_subagents(window):
 
     # Primary cost should not have cluster rollup in parentheses
     assert "$0.081" in window.val_cost.text()
+    assert "含 Subagents" not in window.val_cost.text()
     assert "含集群" not in window.val_cost.text()
     # Tab badge should reflect 0
-    assert window.btn_tab_cluster.text() == "🤖 智能体集群" or "0" in window.btn_tab_cluster.text()
+    assert window.btn_tab_cluster.text() in ("🤖 Subagents", "🤖 智能体集群") or "0" in window.btn_tab_cluster.text()
 
 def test_data_update_with_subagents_and_dual_cost(window):
     """Verifies dual-cost linkage and subagent population."""
@@ -136,7 +138,7 @@ def test_data_update_with_subagents_and_dual_cost(window):
     # Dual cost linkage check
     cost_text = window.val_cost.text()
     assert "$0.081" in cost_text
-    assert "含集群: $0.186" in cost_text
+    assert "含 Subagents: $0.186" in cost_text or "含集群: $0.186" in cost_text
 
     # Tab badge should show 2 agents
     assert "2" in window.btn_tab_cluster.text()
@@ -153,6 +155,9 @@ def test_data_update_with_subagents_and_dual_cost(window):
     c1 = window.subagent_cards[0]
     assert c1.agent_data["role"] == "Explorer 1 (Backend)"
     assert c1.agent_data["state"] == "running"
+    assert "计费" in c1.lbl_tok.text()
+    assert "52.4k" in c1.lbl_tok.text()
+    assert "计费总量" in c1.toolTip()
     # Switch to cluster tab to inspect subagent card accordion
     window.switch_tab("cluster")
     assert c1.detail_frame.isVisible() is False
@@ -265,3 +270,42 @@ def test_cluster_view_height_stability(window):
     assert cluster_h >= 380
     assert window.scroll_area.minimumHeight() >= 300
     assert abs(primary_h - cluster_h) < 100
+
+def test_drag_isolation_and_teleport_prevention(window):
+    """Verifies that clicking or moving mouse over subagent cards does not trigger window drag."""
+    data = make_sample_data(with_subagents=True)
+    window.update_data(data)
+    window.set_layout_mode("dual_wing")
+
+    initial_pos = window.pos()
+    assert window.is_dragging is False
+
+    card = window.subagent_cards[0]
+    # Simulate left click on card
+    press_ev = QMouseEvent(
+        QEvent.Type.MouseButtonPress,
+        QPointF(20, 20),
+        QPointF(window.x() + 400, window.y() + 100),
+        Qt.MouseButton.LeftButton,
+        Qt.MouseButton.LeftButton,
+        Qt.KeyboardModifier.NoModifier
+    )
+    card.mousePressEvent(press_ev)
+    # Window is_dragging should remain False
+    assert window.is_dragging is False
+    assert card.detail_frame.isVisible() is True
+
+    # Simulate mouse move on card
+    move_ev = QMouseEvent(
+        QEvent.Type.MouseMove,
+        QPointF(25, 25),
+        QPointF(window.x() + 405, window.y() + 105),
+        Qt.MouseButton.LeftButton,
+        Qt.MouseButton.LeftButton,
+        Qt.KeyboardModifier.NoModifier
+    )
+    card.mouseMoveEvent(move_ev)
+    assert move_ev.isAccepted() is True
+    # Window position must not teleport or change
+    assert window.pos() == initial_pos
+

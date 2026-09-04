@@ -457,8 +457,14 @@ class SubagentCardWidget(QFrame):
         # Right metric
         tot_tok = self.agent_data.get("totalTokens", 0)
         cost = self.agent_data.get("costUsd", 0.0)
+        p_tok = self.agent_data.get("promptTokens", 0)
+        c_tok = self.agent_data.get("candidateTokens", 0)
+        th_tok = self.agent_data.get("thinkingTokens", 0)
+        ca_tok = self.agent_data.get("cachedTokens", 0)
+        ttft = self.agent_data.get("ttft", 0.0)
+        speed = self.agent_data.get("speed", 0.0)
 
-        self.lbl_tok = QLabel(fmt_tokens(tot_tok), self)
+        self.lbl_tok = QLabel(f"计费 {fmt_tokens(tot_tok)}", self)
         self.lbl_tok.setStyleSheet("font-size: 11px; font-weight: 700;")
         summary_row.addWidget(self.lbl_tok)
 
@@ -472,6 +478,16 @@ class SubagentCardWidget(QFrame):
 
         card_l.addLayout(summary_row)
 
+        # 悬浮提示：明确解释计费总量与输入/输出构成
+        card_tip = (
+            f"【{role}】({sub_type} · {state_str})\n"
+            f"• 计费总量: {fmt_tokens(tot_tok)} (输入: {fmt_tokens(p_tok)} + 输出: {fmt_tokens(c_tok)})\n"
+            f"• Prompt 缓存命中: {fmt_tokens(ca_tok)}\n"
+            f"• 累计折算费用: ${cost:.3f}\n"
+            f"点击展开指标详情"
+        )
+        self.setToolTip(card_tip)
+
         # 2. Detail body (initially hidden)
         self.detail_frame = QFrame(self)
         self.detail_frame.setObjectName("SubagentDetail")
@@ -483,25 +499,23 @@ class SubagentCardWidget(QFrame):
         grid = QVBoxLayout()
         grid.setSpacing(2)
 
-        p_tok = self.agent_data.get("promptTokens", 0)
-        c_tok = self.agent_data.get("candidateTokens", 0)
-        th_tok = self.agent_data.get("thinkingTokens", 0)
-        ca_tok = self.agent_data.get("cachedTokens", 0)
-        ttft = self.agent_data.get("ttft", 0.0)
-        speed = self.agent_data.get("speed", 0.0)
+        row0 = QHBoxLayout()
+        row0.addWidget(self._make_label("计费总量 (入+出):"))
+        row0.addWidget(self._make_val(f"{fmt_tokens(tot_tok)} (${cost:.3f})"))
+        grid.addLayout(row0)
 
         row1 = QHBoxLayout()
-        row1.addWidget(self._make_label("输入 / 缓存:"))
+        row1.addWidget(self._make_label("输入 / 缓存命中:"))
         row1.addWidget(self._make_val(f"{fmt_tokens(p_tok)} / {fmt_tokens(ca_tok)}"))
         grid.addLayout(row1)
 
         row2 = QHBoxLayout()
-        row2.addWidget(self._make_label("生成 / 思考:"))
+        row2.addWidget(self._make_label("模型输出 / 思考:"))
         row2.addWidget(self._make_val(f"{fmt_tokens(c_tok)} / {fmt_tokens(th_tok)}"))
         grid.addLayout(row2)
 
         row3 = QHBoxLayout()
-        row3.addWidget(self._make_label("首字 / 速度:"))
+        row3.addWidget(self._make_label("首字响应 / 速度:"))
         row3.addWidget(self._make_val(f"{ttft:.2f}s · {speed:.0f}t/s" if speed > 0 else f"{ttft:.2f}s"))
         grid.addLayout(row3)
 
@@ -538,12 +552,19 @@ class SubagentCardWidget(QFrame):
         else:
             super().mousePressEvent(event)
 
+    def mouseMoveEvent(self, event):
+        event.accept()
+
+    def mouseReleaseEvent(self, event):
+        event.accept()
+
 class CapsuleWindow(QWidget):
     convo_selected = Signal(str)
 
     def __init__(self, parent=None, default_layout_mode=None):
         super().__init__(parent)
         self.is_expanded = True
+        self.is_dragging = False
         self.drag_position = QPoint()
         self.max_context = 256_000
         self.latest_data = {}
@@ -659,7 +680,7 @@ class CapsuleWindow(QWidget):
         self.btn_tab_primary.clicked.connect(lambda: self.switch_tab("primary"))
         tab_l.addWidget(self.btn_tab_primary)
 
-        self.btn_tab_cluster = QPushButton("🤖 智能体集群", self.tab_bar)
+        self.btn_tab_cluster = QPushButton("🤖 Subagents", self.tab_bar)
         self.btn_tab_cluster.setProperty("class", "TabBtn")
         self.btn_tab_cluster.setProperty("active", "false")
         self.btn_tab_cluster.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
@@ -772,10 +793,10 @@ class CapsuleWindow(QWidget):
 
         # 双翼模式下的右翼头部标题
         self.wing_header_box = QHBoxLayout()
-        self.lbl_wing_cluster = QLabel("🤖 智能体集群雷达", self.view_cluster)
+        self.lbl_wing_cluster = QLabel("🤖 Subagents", self.view_cluster)
         self.lbl_wing_cluster.setStyleSheet("font-size: 11px; font-weight: 700; color: #2563eb;")
         self.wing_header_box.addWidget(self.lbl_wing_cluster)
-        self.lbl_wing_count = QLabel("共 0 个智能体", self.view_cluster)
+        self.lbl_wing_count = QLabel("共 0 个 Subagent", self.view_cluster)
         self.lbl_wing_count.setStyleSheet("font-size: 10px; color: #64748b;")
         self.wing_header_box.addWidget(self.lbl_wing_count, 0, Qt.AlignmentFlag.AlignRight)
         self.lbl_wing_cluster.setVisible(False)
@@ -785,13 +806,14 @@ class CapsuleWindow(QWidget):
         # 微仪表盘横条 (Micro-Dashboard)
         self.micro_dashboard = QFrame(self.view_cluster)
         self.micro_dashboard.setObjectName("MicroDashboard")
+        self.micro_dashboard.setToolTip("所有已派生 Subagent 的累计计费 Token 总量 (输入+输出) 与折算费用")
         micro_l = QHBoxLayout(self.micro_dashboard)
         micro_l.setContentsMargins(8, 6, 8, 6)
         micro_l.setSpacing(6)
 
         m_metric_box = QVBoxLayout()
         m_metric_box.setSpacing(1)
-        lbl_m_title = QLabel("集群总消耗", self.micro_dashboard)
+        lbl_m_title = QLabel("Subagent 计费消耗", self.micro_dashboard)
         lbl_m_title.setStyleSheet("font-size: 9px; color: #64748b; font-weight: 700;")
         m_metric_box.addWidget(lbl_m_title)
 
@@ -824,7 +846,7 @@ class CapsuleWindow(QWidget):
         v_cluster_l.addWidget(self.scroll_area, 1)
 
         # 暂无子智能体空态展示
-        self.empty_cluster_lbl = QLabel("当前主会话暂无派生的子智能体\n派发后将自动实时呈现于此", self.view_cluster)
+        self.empty_cluster_lbl = QLabel("当前主会话暂无派生的 Subagent\n派发后将自动实时呈现于此", self.view_cluster)
         self.empty_cluster_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.empty_cluster_lbl.setStyleSheet("font-size: 11px; color: #64748b; padding: 20px 0;")
         v_cluster_l.addWidget(self.empty_cluster_lbl)
@@ -834,7 +856,7 @@ class CapsuleWindow(QWidget):
         self.global_rollup_box.setStyleSheet("border-radius: 6px; padding: 4px 8px;")
         g_box_l = QHBoxLayout(self.global_rollup_box)
         g_box_l.setContentsMargins(4, 3, 4, 3)
-        self.lbl_global_title = QLabel("全局总计 (主会话 + 集群):", self.global_rollup_box)
+        self.lbl_global_title = QLabel("全局总计 (主会话 + Subagents):", self.global_rollup_box)
         self.lbl_global_title.setStyleSheet("font-size: 11px; font-weight: 600; color: #64748b;")
         g_box_l.addWidget(self.lbl_global_title)
         self.lbl_global_val = QLabel("$0.000", self.global_rollup_box)
@@ -1049,33 +1071,33 @@ class CapsuleWindow(QWidget):
         else:
             self.val_speed.setText("-")
 
-        # 双计费联动展示: $0.081 (含集群: $0.235)
+        # 双计费联动展示: $0.081 (含 Subagents: $0.235)
         combined_cost = cluster.get("combinedCostUsd", cum_cost)
         cluster_cost = cluster.get("totalCostUsd", 0.0)
         if cluster_cost > 0:
-            self.val_cost.setText(f"${cum_cost:.3f} (含集群: ${combined_cost:.3f})")
+            self.val_cost.setText(f"${cum_cost:.3f} (含 Subagents: ${combined_cost:.3f})")
         else:
             self.val_cost.setText(f"${cum_cost:.3f} (计费 {fmt_tokens(cum_billed)})")
 
-        # 5. 更新智能体集群 Tab 徽章与微仪表盘
+        # 5. 更新 Subagents Tab 徽章与微仪表盘
         sub_count = len(subagents)
         running_cnt = cluster.get("runningCount", cluster.get("activeCount", 0))
         done_cnt = cluster.get("doneCount", cluster.get("completedCount", 0))
         cluster_tokens = cluster.get("totalTokens", 0)
 
         if sub_count > 0:
-            self.btn_tab_cluster.setText(f"🤖 智能体集群 • {sub_count}")
+            self.btn_tab_cluster.setText(f"🤖 Subagents • {sub_count}")
             self.btn_tab_cluster.setEnabled(True)
         else:
-            self.btn_tab_cluster.setText("🤖 智能体集群")
+            self.btn_tab_cluster.setText("🤖 Subagents")
             self.btn_tab_cluster.setEnabled(False)
             if self.active_tab == "cluster":
                 self.switch_tab("primary")
 
-        self.micro_metric_val.setText(f"{fmt_tokens(cluster_tokens)} · ${cluster_cost:.3f}")
+        self.micro_metric_val.setText(f"计费 {fmt_tokens(cluster_tokens)} · ${cluster_cost:.3f}")
         self.micro_status_pill.setText(f"🟢 {running_cnt} 运行 · ⚪ {done_cnt} 完成")
 
-        self.lbl_wing_count.setText(f"共 {sub_count} 个智能体")
+        self.lbl_wing_count.setText(f"共 {sub_count} 个 Subagent")
         self.lbl_global_val.setText(f"${combined_cost:.3f}")
 
         # 6. 渲染子智能体列表
@@ -1155,10 +1177,19 @@ class CapsuleWindow(QWidget):
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
+            self.is_dragging = True
             self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
             event.accept()
+        else:
+            super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        if event.buttons() == Qt.MouseButton.LeftButton:
+        if self.is_dragging and (event.buttons() & Qt.MouseButton.LeftButton):
             self.move(event.globalPosition().toPoint() - self.drag_position)
             event.accept()
+        else:
+            super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        self.is_dragging = False
+        super().mouseReleaseEvent(event)
