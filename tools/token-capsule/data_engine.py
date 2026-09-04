@@ -8,12 +8,11 @@ import urllib.request
 from datetime import datetime
 from PySide6.QtCore import QObject, Signal, QTimer
 
-# 导入 proto_decoder
+# 导入本地独立的 proto_decoder (完全自给自足独立沙盒)
 current_dir = os.path.dirname(os.path.abspath(__file__))
-plugin_scripts = os.path.expanduser("~/.gemini/config/plugins/token-monitor/scripts")
 import sys
-if plugin_scripts not in sys.path:
-    sys.path.insert(0, plugin_scripts)
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
 
 try:
     from proto_decoder import extract_usage_from_blob

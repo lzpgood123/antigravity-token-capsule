@@ -10,7 +10,7 @@
 
 | 工具名称 | 形态分类 | 核心功能简介 | 一键启动命令 | 状态 | 详情文档 |
 | :--- | :--- | :--- | :--- | :---: | :--- |
-| **`token-capsule`** | GUI 桌面悬浮窗 | 实时嗅探 Antigravity 会话 CDP 端口，无锁轮询展示 Token 5大分段构成与计费估算 | `.\tools\token-capsule\start_capsule.bat` | 🟢 Active | [文档](tools/token-capsule/README.md) |
+| **`token-capsule`** | GUI 桌面悬浮窗 / 独立 EXE | 实时嗅探 Antigravity 会话 CDP 端口，无锁轮询展示 Token 5大分段构成、首 token 延迟、生成速率与计费估算 | `.\tools\token-capsule\dist\onefile\token-capsule.exe` | 🟢 Active | [文档](tools/token-capsule/README.md) |
 
 *(注：新工具加入时，AI 代理或维护者必须在此表格中完成同步登记)*
 

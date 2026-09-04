@@ -29,3 +29,12 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
+
+# Build & Distribution artifacts
+dist/
+build/
+*.spec
+tools/*/dist/
+tools/*/build/
+tools/*/*.spec
+
