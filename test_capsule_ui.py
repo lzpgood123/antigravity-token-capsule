@@ -520,5 +520,106 @@ def test_long_unspaced_type_name_and_branch_layout(window):
     # Ensure window width is maintained at 340 without forcing window to stretch
     assert window.width() == 340
 
+def test_branch_and_accordion_expansion_persistence_across_updates(window):
+    """Verifies that user-expanded branch and accordion states persist across live polling data updates."""
+    l2_child = {
+        "id": "l2-persist-0001",
+        "parentId": "l1-persist-0001",
+        "depth": 2,
+        "role": "Scout",
+        "type": "scout",
+        "state": "running",
+        "totalTokens": 10000,
+        "costUsd": 0.012,
+        "promptTokens": 9000,
+        "candidateTokens": 1000,
+        "thinkingTokens": 100,
+        "cachedTokens": 5000,
+        "ttft": 0.3,
+        "speed": 60.0,
+        "lastAction": "运行中...",
+        "children": []
+    }
+    l1_root = {
+        "id": "l1-persist-0001",
+        "parentId": "primary-persist",
+        "depth": 1,
+        "role": "Lead",
+        "type": "lead",
+        "state": "running",
+        "totalTokens": 20000,
+        "costUsd": 0.024,
+        "promptTokens": 18000,
+        "candidateTokens": 2000,
+        "thinkingTokens": 200,
+        "cachedTokens": 10000,
+        "ttft": 0.4,
+        "speed": 70.0,
+        "lastAction": "协调中...",
+        "children": [l2_child]
+    }
+    cluster = {
+        "totalTokens": 30000,
+        "totalCostUsd": 0.036,
+        "combinedCostUsd": 0.080,
+        "totalCount": 2,
+        "runningCount": 2,
+        "doneCount": 0,
+        "subagents": [l1_root],
+        "allSubagents": [l1_root, l2_child]
+    }
+    data = {
+        "conversationId": "primary-persist",
+        "title": "Persistence Test",
+        "activeContext": 10000,
+        "breakdown": {},
+        "turn": {},
+        "cumulative": {"costUsd": 0.044, "billedTokens": 10000},
+        "cluster": cluster
+    }
+
+    # Initial load
+    window.update_data(data)
+    window.switch_tab("cluster")
+
+    root_card = window.subagent_cards[0]
+    assert root_card.children_container.isVisible() is False
+    assert root_card.detail_frame.isVisible() is False
+
+    # User expands branch and accordion
+    root_card.toggle_branch()
+    root_card.toggle_accordion()
+    assert root_card.children_container.isVisible() is True
+    assert root_card.detail_frame.isVisible() is True
+    assert "收起子任务 ▲" in root_card.btn_toggle_branch.text()
+
+    child_card = root_card.child_widgets[0]
+    child_card.toggle_accordion()
+    assert child_card.detail_frame.isVisible() is True
+
+    # Simulate subagents generating new tokens in the background (polling update)
+    data2 = dict(data)
+    cluster2 = dict(cluster)
+    l1_updated = dict(l1_root, totalTokens=25000, costUsd=0.030)
+    l2_updated = dict(l2_child, totalTokens=15000, costUsd=0.018)
+    l1_updated["children"] = [l2_updated]
+    cluster2["subagents"] = [l1_updated]
+    cluster2["allSubagents"] = [l1_updated, l2_updated]
+    data2["cluster"] = cluster2
+
+    window.update_data(data2)
+
+    # Verify that cards did NOT rebound/snap back to collapsed!
+    new_root = window.subagent_cards[0]
+    assert new_root.children_container.isVisible() is True
+    assert "收起子任务 ▲" in new_root.btn_toggle_branch.text()
+    assert new_root.detail_frame.isVisible() is True
+    assert len(new_root.child_widgets) == 1
+
+    new_child = new_root.child_widgets[0]
+    assert new_child.detail_frame.isVisible() is True
+    assert "计费 15.0k" in new_child.lbl_tok.text()
+
+
 
 

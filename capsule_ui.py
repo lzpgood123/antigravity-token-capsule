@@ -433,12 +433,14 @@ class SegmentedProgressBar(QWidget):
                 current_x += seg_w
 
 class SubagentCardWidget(QFrame):
-    def __init__(self, agent_data: dict, parent=None):
+    def __init__(self, agent_data: dict, parent=None, expanded_branches: set = None, expanded_accordions: set = None):
         super().__init__(parent)
         self.agent_data = agent_data
         self.depth = agent_data.get("depth", 1)
         self.children_data = agent_data.get("children", [])
         self.child_widgets = []
+        self.expanded_branches = expanded_branches if expanded_branches is not None else set()
+        self.expanded_accordions = expanded_accordions if expanded_accordions is not None else set()
         self.setObjectName("SubagentCard")
         self.setProperty("class", "SubagentCard")
         self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
@@ -531,10 +533,13 @@ class SubagentCardWidget(QFrame):
         )
         self.setToolTip(card_tip)
 
-        # 2. Detail body (initially hidden)
+        # 2. Detail body (persists user accordion expansion state)
         self.detail_frame = QFrame(self)
         self.detail_frame.setObjectName("SubagentDetail")
-        self.detail_frame.setVisible(False)
+        agent_id = self.agent_data.get("id")
+        is_accordion_open = (agent_id in self.expanded_accordions) if agent_id else False
+        self.detail_frame.setVisible(is_accordion_open)
+        self.lbl_chevron.setText("▲" if is_accordion_open else "▼")
         detail_l = QVBoxLayout(self.detail_frame)
         detail_l.setContentsMargins(4, 4, 4, 4)
         detail_l.setSpacing(4)
@@ -603,7 +608,10 @@ class SubagentCardWidget(QFrame):
             self.lbl_branch_summary.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
             self.branch_row.addWidget(self.lbl_branch_summary, 1)
 
-            self.btn_toggle_branch = QPushButton("展开子任务 ▼", self)
+            agent_id = self.agent_data.get("id")
+            is_branch_open = (agent_id in self.expanded_branches) if agent_id else False
+
+            self.btn_toggle_branch = QPushButton("收起子任务 ▲" if is_branch_open else "展开子任务 ▼", self)
             self.btn_toggle_branch.setProperty("class", "BranchToggleBtn")
             self.btn_toggle_branch.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
             self.btn_toggle_branch.clicked.connect(self.toggle_branch)
@@ -611,17 +619,22 @@ class SubagentCardWidget(QFrame):
 
             card_l.addLayout(self.branch_row)
 
-            # Children container (initially hidden)
+            # Children container (persists user branch expansion state)
             self.children_container = QFrame(self)
             self.children_container.setObjectName("ChildrenContainer")
             self.children_container.setProperty("class", "ChildrenContainer")
-            self.children_container.setVisible(False)
+            self.children_container.setVisible(is_branch_open)
             children_layout = QVBoxLayout(self.children_container)
             children_layout.setContentsMargins(4, 2, 0, 2)
             children_layout.setSpacing(4)
 
             for child_data in self.children_data:
-                child_card = SubagentCardWidget(child_data, self.children_container)
+                child_card = SubagentCardWidget(
+                    child_data,
+                    self.children_container,
+                    expanded_branches=self.expanded_branches,
+                    expanded_accordions=self.expanded_accordions
+                )
                 self.child_widgets.append(child_card)
                 children_layout.addWidget(child_card)
 
@@ -641,6 +654,12 @@ class SubagentCardWidget(QFrame):
         new_v = not self.detail_frame.isVisible()
         self.detail_frame.setVisible(new_v)
         self.lbl_chevron.setText("▲" if new_v else "▼")
+        agent_id = self.agent_data.get("id")
+        if agent_id:
+            if new_v:
+                self.expanded_accordions.add(agent_id)
+            else:
+                self.expanded_accordions.discard(agent_id)
 
     def toggle_branch(self):
         if hasattr(self, 'children_container'):
@@ -648,6 +667,12 @@ class SubagentCardWidget(QFrame):
             self.children_container.setVisible(new_v)
             if hasattr(self, 'btn_toggle_branch'):
                 self.btn_toggle_branch.setText("收起子任务 ▲" if new_v else "展开子任务 ▼")
+            agent_id = self.agent_data.get("id")
+            if agent_id:
+                if new_v:
+                    self.expanded_branches.add(agent_id)
+                else:
+                    self.expanded_branches.discard(agent_id)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
@@ -695,6 +720,8 @@ class CapsuleWindow(QWidget):
             self.layout_mode = saved_settings.get("layout_mode", "compact")
         self.active_tab = "primary"  # "primary" or "cluster"
         self.subagent_cards = []
+        self.expanded_branches = set()
+        self.expanded_accordions = set()
 
         self.setWindowFlags(
             Qt.WindowType.WindowStaysOnTopHint |
@@ -1222,6 +1249,10 @@ class CapsuleWindow(QWidget):
         self.lbl_global_val.setText(f"${combined_cost:.3f}")
 
         # 6. 渲染子智能体列表
+        # 记录垂直滚动条位置，防止重绘时滚动条跳回顶部
+        scroll_bar = self.scroll_area.verticalScrollBar()
+        scroll_pos = scroll_bar.value() if scroll_bar else 0
+
         # 清除旧卡片
         for card in self.subagent_cards:
             self.subagent_list_layout.removeWidget(card)
@@ -1235,10 +1266,19 @@ class CapsuleWindow(QWidget):
             self.empty_cluster_lbl.setVisible(False)
             self.scroll_area.setVisible(True)
             for s in subagents:
-                card = SubagentCardWidget(s, self.scroll_content)
+                card = SubagentCardWidget(
+                    s,
+                    self.scroll_content,
+                    expanded_branches=self.expanded_branches,
+                    expanded_accordions=self.expanded_accordions
+                )
                 self.subagent_cards.append(card)
                 # 插入在 stretch 之前
                 self.subagent_list_layout.insertWidget(self.subagent_list_layout.count() - 1, card)
+                card.show()
+
+            if scroll_bar:
+                scroll_bar.setValue(scroll_pos)
 
         # 7. 收起迷你药丸态
         pill_text = f"{ctx_pct:.1f}% 上下文"
@@ -1279,6 +1319,8 @@ class CapsuleWindow(QWidget):
     def _on_combo_changed(self, idx):
         target_id = self.combo_conv.currentData()
         if target_id:
+            self.expanded_branches.clear()
+            self.expanded_accordions.clear()
             self.convo_selected.emit(target_id)
 
     def toggle_mode(self):
