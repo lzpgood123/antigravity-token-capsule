@@ -115,8 +115,8 @@ def main():
     layout_group = QActionGroup(menu)
     layout_group.setExclusive(True)
 
-    act_compact = QAction("紧凑单卡 (方案 A · 默认)", layout_menu, checkable=True)
-    act_dual = QAction("展开双翼 (方案 C · 雷达)", layout_menu, checkable=True)
+    act_compact = QAction("紧凑单卡", layout_menu, checkable=True)
+    act_dual = QAction("展开双翼", layout_menu, checkable=True)
 
     if window.layout_mode == "dual_wing":
         act_dual.setChecked(True)
