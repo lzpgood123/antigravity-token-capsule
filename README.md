@@ -55,13 +55,17 @@ start_capsule.bat
 
 ## 🔨 一键编译打包为 EXE (Build)
 
-工具配备了全自动化编译脚本，支持一键生成专属图标与双模式 EXE：
+工具配备了全自动化编译脚本，支持一键完成高清图标生成、单文件、多文件、绿色 ZIP 及 Inno Setup 安装包的四合一构建：
 ```bat
 build_exe.bat
 ```
 编译产物输出位置：
-* 单文件版：`dist\onefile\token-capsule.exe`
-* 目录版：`dist\onedir\token-capsule\token-capsule.exe`
+* 👑 **Windows 安装包**：`dist\installer\token-capsule-Setup-v1.1.0.exe`（自动关联桌面与开始菜单图标，免管理员权限）
+* 🧰 **绿色免安装 ZIP**：`dist\zip\token-capsule-v1.1.0-windows-x64.zip`（解压即用，毫秒秒开）
+* ⚡ **单文件独立版**：`dist\onefile\token-capsule.exe`（单文件拷走即用，含临时解压）
+* 📂 **绿色目录调试版**：`dist\onedir\token-capsule\`（本地开发测试秒开目录）
+
+> 💡 **提示**：安装包构建基于 Inno Setup 6 脚本 [`installer.iss`](installer.iss)。若本地已安装 Inno Setup，脚本会自动检测并编译生成安装包；未安装时会自动跳过安装包步骤，不影响其他产物。
 
 ---
 

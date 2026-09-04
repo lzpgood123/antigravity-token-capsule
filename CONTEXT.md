@@ -54,6 +54,21 @@
 * **定义**：跨主会话及所有子智能体的累计 Token 与财务折算费用的全局聚合指标。
 * _Avoid_：严禁将集群汇总 Token 直接代入主会话 256k 物理进度条计算百分比。
 
+### 11. 多层级树形级联 (Recursive Tree Hierarchy)
+* **定义**：支持以当前主会话为根节点，由浅入深递归探测派生出的子任务链（如 L1 调度智能体 ➔ L2 分解智能体 ➔ L3 实施工兵）。每个节点独立计算其私有 Token 与开销，并向上级联汇总其全部衍生后代的合并 Token 与费用。
+* _Avoid_：不要扁平化铺陈所有 Subagent；必须保持派生亲缘关系的树形级联结构。
+
+### 12. 手风琴折叠记忆 (Accordion State Memory)
+* **定义**：在 UI 周期性（如 300ms/1000ms）轮询重绘时，用户手动点击展开或收起的卡片状态应被精确记忆并继承，禁止因数据刷新导致 UI 自动回弹或重置折叠态。
+* _Avoid_：严禁在每次定时器轮询时清空重建整个子控件列表。
+
+### 13. 三维分发矩阵 (Distribution Packaging Matrix)
+* **定义**：为兼顾分发便携性与运行毫秒秒开速度，由 `build_exe.bat` 自动化输出的 3 种互补客户端交付形态：
+  1. **安装包版 (Installer Package)**：基于 Inno Setup 构建的单文件安装器，免管理员权限安装至用户应用目录，自动创建桌面图标，日常秒开（0.2s）。
+  2. **绿色便携版 (Portable ZIP)**：包含完整依赖的压缩包，解压即用，同样享受毫秒秒开。
+  3. **单文件独立版 (Standalone Single-File)**：PyInstaller `--onefile` 生成，免解压单文件，含 2 秒临时自解压。
+* _Avoid_：不要混淆安装包与纯单文件版；安装包分发单文件但运行多文件版。
+
 ---
 
 ## 🏛️ 领域关系映射
@@ -61,24 +76,30 @@
 ```
 [CDP Port Sniffer] ──(捕获当前焦点)──> [Primary Session (UUID)]
                                            │
-                                           ├───────(派生/日志关联)──────┐
-                                           │                          ▼
-                                           ▼                  [Agent Cluster]
-                             [Primary Session SQLite]        [Subagent SQLite * N]
-                                           │                          │
-                                           ▼                          ▼
-                                   [Proto Usage Blob]        [Proto Usage Blob * N]
-                                           │                          │
-                                           ▼                          ▼
-                                   [5-Segment Context]       [Subagent Metrics]
-                                           │                          │
-                                           └───────────┬──────────────┘
-                                                       ▼
-                                            [Cluster Rollup Usage]
-                                                       │
-                                                       ▼
-                                     [Capsule Window (Tab View)]
-                                     ├── Tab 1: 主会话 (物理窗口)
-                                     └── Tab 2: 智能体集群 (列表与汇总)
+                                           ├───────(transcript 递归嗅探)────┐
+                                           │                               ▼
+                                           ▼                       [Recursive Tree Hierarchy]
+                             [Primary Session SQLite]              ├── L1: Teamwork Lead
+                                           │                       ├── L2: Project Orchestrator
+                                           ▼                       └── L3: Execution Workers * N
+                                   [Proto Usage Blob]                              │
+                                           │                                       ▼
+                                           ▼                              [Subagent SQLites * N]
+                                   [5-Segment Context]                             │
+                                           │                                       ▼
+                                           │                              [Subagent Metrics * N]
+                                           │                                       │
+                                           └───────────────────┬───────────────────┘
+                                                               ▼
+                                                    [Cluster Rollup Usage]
+                                                               │
+                                                               ▼
+                                              [Hybrid Layout Mode Controller]
+                                              ├── Compact Tab (320px)
+                                              │   ├── Tab 1: 主会话 (物理窗口 + 双计费联动)
+                                              │   └── Tab 2: Subagents (手风琴记忆折叠)
+                                              └── Dual-Wing Radar (680px)
+                                                  ├── 左翼: 主会话五维物理卡片
+                                                  └── 右翼: 多层级树形级联实时雷达
 ```
 
