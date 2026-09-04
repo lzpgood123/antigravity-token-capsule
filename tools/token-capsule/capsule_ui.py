@@ -103,9 +103,14 @@ def get_settings_file_path():
     os.makedirs(app_dir, exist_ok=True)
     return os.path.join(app_dir, "capsule_settings.json")
 
+def get_theme_file_path():
+    app_dir = os.path.expanduser("~/.gemini/antigravity")
+    os.makedirs(app_dir, exist_ok=True)
+    return os.path.join(app_dir, "capsule_theme.json")
+
 def load_saved_settings() -> dict:
     settings_path = get_settings_file_path()
-    theme_path = os.path.join(os.path.expanduser("~/.gemini/antigravity"), "capsule_theme.json")
+    theme_path = get_theme_file_path()
     settings = {"theme": "light", "layout_mode": "compact"}
 
     if os.path.exists(settings_path):
