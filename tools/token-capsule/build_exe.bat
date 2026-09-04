@@ -37,7 +37,7 @@ if not exist "capsule.ico" (
 
 echo.
 echo [1/2] Compiling Standalone Single-File EXE (--onefile)...
-pyinstaller --noconsole --onefile --clean ^
+pyinstaller --noconsole --onefile --clean -y ^
     --name "token-capsule" ^
     --icon "capsule.ico" ^
     --add-data "%~dp0capsule.ico;." ^
@@ -52,7 +52,7 @@ if errorlevel 1 (
 
 echo.
 echo [2/2] Compiling Portable Directory EXE (--onedir)...
-pyinstaller --noconsole --onedir --clean ^
+pyinstaller --noconsole --onedir --clean -y ^
     --name "token-capsule" ^
     --icon "capsule.ico" ^
     --add-data "%~dp0capsule.ico;." ^

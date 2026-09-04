@@ -1,3 +1,5 @@
+import json
+import os
 from PySide6.QtCore import Qt, QPoint, Signal
 from PySide6.QtGui import (
     QColor, QCursor, QGuiApplication, QPainter, QPainterPath
@@ -8,100 +10,210 @@ from PySide6.QtWidgets import (
 )
 from data_engine import fmt_tokens
 
-LIGHT_CARD_STYLE = """
-QWidget#CardRoot {
-    background-color: #ffffff;
-    border: 1px solid #e2e8f0;
+THEME_CONFIGS = {
+    "light": {
+        "name": "极简明亮 (Pure Light)",
+        "card_bg": "#ffffff",
+        "pill_bg": "#ffffff",
+        "border": "#e2e8f0",
+        "text_main": "#0f172a",
+        "text_sub": "#64748b",
+        "item_label": "#334155",
+        "item_val": "#64748b",
+        "accent": "#2563eb",
+        "hover_bg": "#f1f5f9",
+        "combo_bg": "#f8fafc",
+        "cost_color": "#d97706",
+        "bar_bg": "#f1f5f9",
+        "sep_bg": "#f1f5f9",
+    },
+    "dark": {
+        "name": "深邃暗夜 (Obsidian Dark)",
+        "card_bg": "#0f172a",
+        "pill_bg": "#0f172a",
+        "border": "#334155",
+        "text_main": "#f8fafc",
+        "text_sub": "#94a3b8",
+        "item_label": "#cbd5e1",
+        "item_val": "#94a3b8",
+        "accent": "#60a5fa",
+        "hover_bg": "#1e293b",
+        "combo_bg": "#1e293b",
+        "cost_color": "#fbbf24",
+        "bar_bg": "#1e293b",
+        "sep_bg": "#334155",
+    },
+    "glass": {
+        "name": "磨砂极光 (Frosted Aurora)",
+        "card_bg": "rgba(240, 249, 255, 0.94)",
+        "pill_bg": "rgba(240, 249, 255, 0.94)",
+        "border": "rgba(186, 230, 253, 0.9)",
+        "text_main": "#0369a1",
+        "text_sub": "#0284c7",
+        "item_label": "#0f172a",
+        "item_val": "#0369a1",
+        "accent": "#0284c7",
+        "hover_bg": "rgba(224, 242, 254, 0.8)",
+        "combo_bg": "rgba(255, 255, 255, 0.9)",
+        "cost_color": "#d97706",
+        "bar_bg": "rgba(224, 242, 254, 0.8)",
+        "sep_bg": "rgba(186, 230, 253, 0.7)",
+    },
+    "cyberpunk": {
+        "name": "赛博黑客 (Matrix Neon)",
+        "card_bg": "#080c14",
+        "pill_bg": "#080c14",
+        "border": "#00f0ff",
+        "text_main": "#00ff9d",
+        "text_sub": "#00f0ff",
+        "item_label": "#c7d2fe",
+        "item_val": "#00f0ff",
+        "accent": "#00ff9d",
+        "hover_bg": "#142238",
+        "combo_bg": "#0f1a2e",
+        "cost_color": "#facc15",
+        "bar_bg": "#16233b",
+        "sep_bg": "rgba(0, 240, 255, 0.4)",
+    },
+    "warm": {
+        "name": "暖阳纸墨 (Warm Paper)",
+        "card_bg": "#faf7f2",
+        "pill_bg": "#faf7f2",
+        "border": "#e7dfd5",
+        "text_main": "#292524",
+        "text_sub": "#78716c",
+        "item_label": "#44403c",
+        "item_val": "#78716c",
+        "accent": "#b45309",
+        "hover_bg": "#eee5d8",
+        "combo_bg": "#f5efe6",
+        "cost_color": "#d97706",
+        "bar_bg": "#eee5d8",
+        "sep_bg": "#e7dfd5",
+    }
+}
+
+def get_theme_file_path():
+    app_dir = os.path.expanduser("~/.gemini/antigravity")
+    os.makedirs(app_dir, exist_ok=True)
+    return os.path.join(app_dir, "capsule_theme.json")
+
+def load_saved_theme() -> str:
+    path = get_theme_file_path()
+    if os.path.exists(path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                t = data.get("theme", "light")
+                if t in THEME_CONFIGS:
+                    return t
+        except Exception:
+            pass
+    return "light"
+
+def save_theme(theme_name: str):
+    path = get_theme_file_path()
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump({"theme": theme_name}, f, indent=2)
+    except Exception:
+        pass
+
+def make_theme_qss(cfg):
+    return f"""
+QWidget#CardRoot {{
+    background-color: {cfg['card_bg']};
+    border: 1px solid {cfg['border']};
     border-radius: 16px;
-}
+}}
 
-QWidget#PillRoot {
-    background-color: #ffffff;
-    border: 1px solid #e2e8f0;
+QWidget#PillRoot {{
+    background-color: {cfg['pill_bg']};
+    border: 1px solid {cfg['border']};
     border-radius: 18px;
-}
+}}
 
-QLabel {
+QLabel {{
     font-family: 'Segoe UI', -apple-system, system-ui, sans-serif;
-}
+}}
 
-QLabel#TitleLabel {
-    color: #0f172a;
+QLabel#TitleLabel {{
+    color: {cfg['text_main']};
     font-size: 15px;
     font-weight: 700;
-}
+}}
 
-QLabel#HeroPct {
-    color: #0f172a;
+QLabel#HeroPct {{
+    color: {cfg['text_main']};
     font-size: 26px;
     font-weight: 800;
-}
+}}
 
-QLabel#HeroSub {
-    color: #64748b;
+QLabel#HeroSub {{
+    color: {cfg['text_sub']};
     font-size: 13px;
     font-weight: 500;
     padding-bottom: 2px;
-}
+}}
 
-QPushButton#CloseBtn {
+QPushButton#CloseBtn {{
     background: transparent;
-    color: #64748b;
+    color: {cfg['text_sub']};
     border: none;
     font-size: 14px;
     font-weight: bold;
     padding: 2px 6px;
     border-radius: 4px;
-}
-QPushButton#CloseBtn:hover {
-    color: #0f172a;
-    background-color: #f1f5f9;
-}
+}}
+QPushButton#CloseBtn:hover {{
+    color: {cfg['text_main']};
+    background-color: {cfg['hover_bg']};
+}}
 
-QComboBox#ConvPicker {
-    background-color: #f8fafc;
-    color: #2563eb;
-    border: 1px solid #e2e8f0;
+QComboBox#ConvPicker {{
+    background-color: {cfg['combo_bg']};
+    color: {cfg['accent']};
+    border: 1px solid {cfg['border']};
     border-radius: 6px;
     padding: 2px 6px;
     font-size: 11px;
     font-weight: 600;
-}
-QComboBox#ConvPicker::drop-down {
+}}
+QComboBox#ConvPicker::drop-down {{
     border: none;
     width: 14px;
-}
-QComboBox#ConvPicker QAbstractItemView {
-    background-color: #ffffff;
-    color: #1e293b;
-    selection-background-color: #eff6ff;
-    selection-color: #2563eb;
-    border: 1px solid #e2e8f0;
+}}
+QComboBox#ConvPicker QAbstractItemView {{
+    background-color: {cfg['card_bg']};
+    color: {cfg['text_main']};
+    selection-background-color: {cfg['hover_bg']};
+    selection-color: {cfg['accent']};
+    border: 1px solid {cfg['border']};
     outline: none;
     font-size: 11px;
-}
+}}
 
-QLabel.ItemLabel {
-    color: #334155;
+QLabel.ItemLabel, QLabel[class="ItemLabel"] {{
+    color: {cfg['item_label']};
     font-size: 13px;
     font-weight: 500;
-}
-QLabel.ItemVal {
-    color: #64748b;
+}}
+QLabel.ItemVal, QLabel[class="ItemVal"] {{
+    color: {cfg['item_val']};
     font-size: 13px;
     font-weight: 600;
-}
+}}
 
-QLabel#PillText {
-    color: #0f172a;
+QLabel#PillText {{
+    color: {cfg['text_main']};
     font-size: 12px;
     font-weight: 600;
-}
-QLabel#PillCost {
-    color: #d97706;
+}}
+QLabel#PillCost {{
+    color: {cfg['cost_color']};
     font-size: 12px;
     font-weight: 700;
-}
+}}
 """
 
 class SegmentedProgressBar(QWidget):
@@ -109,6 +221,11 @@ class SegmentedProgressBar(QWidget):
         super().__init__(parent)
         self.setFixedHeight(8)
         self.segments = []
+        self.bg_color = QColor("#f1f5f9")
+
+    def set_bg_color(self, color_str):
+        self.bg_color = QColor(color_str)
+        self.update()
 
     def set_segments(self, segments):
         self.segments = segments
@@ -119,7 +236,7 @@ class SegmentedProgressBar(QWidget):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         rect = self.rect()
 
-        painter.setBrush(QColor("#f1f5f9"))
+        painter.setBrush(self.bg_color)
         painter.setPen(Qt.PenStyle.NoPen)
         painter.drawRoundedRect(rect, 4, 4)
 
@@ -144,6 +261,7 @@ class CapsuleWindow(QWidget):
         self.drag_position = QPoint()
         self.max_context = 256_000  # 固定回 256K 压缩红线，视觉饱满清晰
         self.latest_data = {}
+        self.current_theme = load_saved_theme()
 
         self.setWindowFlags(
             Qt.WindowType.WindowStaysOnTopHint |
@@ -153,10 +271,38 @@ class CapsuleWindow(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 
         self.init_ui()
-        self.setStyleSheet(LIGHT_CARD_STYLE)
+        self.set_theme(self.current_theme, save=False)
 
         screen = QGuiApplication.primaryScreen().availableGeometry()
         self.move(screen.width() - 330, 50)
+
+    def get_current_theme(self) -> str:
+        return self.current_theme
+
+    def set_theme(self, theme_name: str, save: bool = True):
+        if theme_name not in THEME_CONFIGS:
+            theme_name = "light"
+        self.current_theme = theme_name
+        cfg = THEME_CONFIGS[theme_name]
+
+        self.setStyleSheet(make_theme_qss(cfg))
+        if hasattr(self, 'prog_bar'):
+            self.prog_bar.set_bg_color(cfg['bar_bg'])
+        if hasattr(self, 'sep_line'):
+            self.sep_line.setStyleSheet(f"background-color: {cfg['sep_bg']}; max-height: 1px;")
+        if hasattr(self, 'pill_sep'):
+            self.pill_sep.setStyleSheet(f"color: {cfg['border']}; font-size: 11px;")
+        if hasattr(self, 'pill_sep2'):
+            self.pill_sep2.setStyleSheet(f"color: {cfg['border']}; font-size: 11px;")
+
+        # 如果当前没有超 100% 报警，清除 inline style 让 QSS 控制
+        if hasattr(self, 'lbl_hero_pct') and hasattr(self, 'latest_data'):
+            ctx = self.latest_data.get("activeContext", 0)
+            if (ctx / self.max_context * 100) < 100.0:
+                self.lbl_hero_pct.setStyleSheet("")
+
+        if save:
+            save_theme(theme_name)
 
     def init_ui(self):
         self.main_layout = QVBoxLayout(self)
@@ -241,10 +387,10 @@ class CapsuleWindow(QWidget):
         card_l.addLayout(self.breakdown_layout)
 
         # 5. 分割线
-        sep_line = QFrame(self)
-        sep_line.setFrameShape(QFrame.Shape.HLine)
-        sep_line.setStyleSheet("background-color: #f1f5f9; max-height: 1px;")
-        card_l.addWidget(sep_line)
+        self.sep_line = QFrame(self)
+        self.sep_line.setFrameShape(QFrame.Shape.HLine)
+        self.sep_line.setStyleSheet("background-color: #f1f5f9; max-height: 1px;")
+        card_l.addWidget(self.sep_line)
 
         # 6. 会话计费与输出指标 (融合保留)
         summary_box = QVBoxLayout()
@@ -284,9 +430,9 @@ class CapsuleWindow(QWidget):
         self.pill_info.setObjectName("PillText")
         pill_l.addWidget(self.pill_info)
 
-        sep = QLabel("│", self)
-        sep.setStyleSheet("color: #e2e8f0; font-size: 11px;")
-        pill_l.addWidget(sep)
+        self.pill_sep = QLabel("│", self)
+        self.pill_sep.setStyleSheet("color: #e2e8f0; font-size: 11px;")
+        pill_l.addWidget(self.pill_sep)
 
         self.pill_perf = QLabel("", self)
         self.pill_perf.setStyleSheet("color: #0284c7; font-size: 11px; font-weight: 600;")
@@ -347,10 +493,10 @@ class CapsuleWindow(QWidget):
         ctx_pct = (active_ctx / self.max_context * 100) if self.max_context > 0 else 0.0
         self.lbl_hero_pct.setText(f"{ctx_pct:.1f}%")
         if ctx_pct >= 100.0:
-            self.lbl_hero_pct.setStyleSheet("color: #ef4444; font-size: 24px; font-weight: 800;")
+            self.lbl_hero_pct.setStyleSheet("color: #ef4444; font-size: 26px; font-weight: 800;")
             self.lbl_hero_sub.setText(f"已使用 {fmt_tokens(active_ctx)} / 256k ⚠️ (待压缩)")
         else:
-            self.lbl_hero_pct.setStyleSheet("color: #0f172a; font-size: 24px; font-weight: 800;")
+            self.lbl_hero_pct.setStyleSheet("")
             self.lbl_hero_sub.setText(f"已使用 {fmt_tokens(active_ctx)} / 256k")
 
         # 2. 分段多彩进度条 (基于 256.0K 饱满比例)
@@ -456,31 +602,12 @@ class CapsuleWindow(QWidget):
         self.pill_frame.setVisible(not self.is_expanded)
         self.adjustSize()
 
-    # --- 鼠标手势与边缘吸附 ---
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
             event.accept()
 
     def mouseMoveEvent(self, event):
-        if event.buttons() == Qt.MouseButton.LeftButton and not self.drag_position.isNull():
+        if event.buttons() == Qt.MouseButton.LeftButton:
             self.move(event.globalPosition().toPoint() - self.drag_position)
             event.accept()
-
-    def mouseReleaseEvent(self, event):
-        self.drag_position = QPoint()
-        screen = QGuiApplication.primaryScreen().availableGeometry()
-        pos = self.pos()
-        snap_distance = 30
-
-        new_x = pos.x()
-        if pos.x() < screen.left() + snap_distance:
-            new_x = screen.left() + 10
-        elif pos.x() + self.width() > screen.right() - snap_distance:
-            new_x = screen.right() - self.width() - 10
-
-        new_y = max(screen.top() + 10, min(pos.y(), screen.bottom() - self.height() - 10))
-        self.move(new_x, new_y)
-
-    def mouseDoubleClickEvent(self, event):
-        self.toggle_mode()
