@@ -36,11 +36,12 @@ if not exist "capsule.ico" (
 )
 
 echo.
-echo [1/2] Compiling Standalone Single-File EXE (--onefile)...
+echo [1/4] Compiling Standalone Single-File EXE (--onefile)...
 pyinstaller --noconsole --onefile --clean -y ^
     --name "token-capsule" ^
     --icon "capsule.ico" ^
     --add-data "%~dp0capsule.ico;." ^
+    --workpath "build/onefile" ^
     --distpath "dist/onefile" ^
     main.py
 
@@ -51,11 +52,12 @@ if errorlevel 1 (
 )
 
 echo.
-echo [2/2] Compiling Portable Directory EXE (--onedir)...
+echo [2/4] Compiling Portable Directory EXE (--onedir)...
 pyinstaller --noconsole --onedir --clean -y ^
     --name "token-capsule" ^
     --icon "capsule.ico" ^
     --add-data "%~dp0capsule.ico;." ^
+    --workpath "build/onedir" ^
     --distpath "dist/onedir" ^
     main.py
 
@@ -66,12 +68,38 @@ if errorlevel 1 (
 )
 
 echo.
+echo [3/4] Creating Portable ZIP Archive...
+if not exist "dist\zip" mkdir "dist\zip"
+powershell -Command "Compress-Archive -Path 'dist\onedir\token-capsule\*' -DestinationPath 'dist\zip\token-capsule-v1.1.0-windows-x64.zip' -Force"
+
+echo.
+echo [4/4] Checking and Compiling Inno Setup Installer...
+set "ISCC_PATH="
+if exist "%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" set "ISCC_PATH=%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe"
+if exist "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" set "ISCC_PATH=C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+if exist "C:\Program Files\Inno Setup 6\ISCC.exe" set "ISCC_PATH=C:\Program Files\Inno Setup 6\ISCC.exe"
+
+if defined ISCC_PATH (
+    echo [INFO] Found Inno Setup compiler at "%ISCC_PATH%"
+    "%ISCC_PATH%" installer.iss
+    if errorlevel 1 (
+        echo [WARN] Inno Setup compilation failed!
+    ) else (
+        echo [INFO] Installer created successfully!
+    )
+) else (
+    echo [WARN] ISCC.exe not found in common locations. Skipping installer compilation.
+)
+
+echo.
 echo ========================================================
 echo   BUILD COMPLETED SUCCESSFULLY!
 echo ========================================================
 echo.
 echo Output Deliverables:
-echo   1. Single-file: dist\onefile\token-capsule.exe
-echo   2. Portable dir: dist\onedir\token-capsule\token-capsule.exe
+echo   1. Windows Installer: dist\installer\token-capsule-Setup-v1.1.0.exe
+echo   2. Portable ZIP:      dist\zip\token-capsule-v1.1.0-windows-x64.zip
+echo   3. Standalone EXE:    dist\onefile\token-capsule.exe
+echo   4. Portable dir:      dist\onedir\token-capsule\
 echo.
 pause

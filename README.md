@@ -10,7 +10,7 @@
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows-0078D6.svg?logo=windows)](#)
 [![Python: 3.10+](https://img.shields.io/badge/Python-3.10%2B-brightgreen.svg?logo=python)](#)
 [![GUI: PySide6](https://img.shields.io/badge/GUI-PySide6-41CD52.svg?logo=qt)](#)
-[![Release: v1.0.0](https://img.shields.io/badge/Release-v1.0.0-orange.svg)](https://github.com/lzpgood123/antigravity-token-capsule/releases)
+[![Release: v1.1.0](https://img.shields.io/badge/Release-v1.1.0-orange.svg)](https://github.com/lzpgood123/antigravity-token-capsule/releases)
 
 </div>
 
@@ -146,20 +146,30 @@ flowchart TD
 
 ## 🚀 快速上手
 
-### 方式 1：直接运行预编译单文件 EXE（最推荐）
+### 方式 1：Windows 安装包（👑 最推荐日常使用）
 
-1. 前往 [GitHub Releases](https://github.com/lzpgood123/antigravity-token-capsule/releases) 下载最新的 `token-capsule.exe`。
-2. 双击直接运行。
-3. 确保你的 Antigravity 客户端已启动，悬浮胶囊将会在毫秒级内自动吸附当前会话！
+1. 前往 [GitHub Releases](https://github.com/lzpgood123/antigravity-token-capsule/releases) 下载最新的 **`token-capsule-Setup-v1.1.0.exe`**。
+2. 双击安装（免管理员权限），自动在桌面生成胶囊快捷方式。
+3. 双击运行，即可享受**毫秒级秒开（0.2s）**的极速流畅体验！
 
-### 方式 2：Python 源码无控制台静默运行
+### 方式 2：绿色便携解压版（ZIP 推荐）
+
+1. 下载 **`token-capsule-v1.1.0-windows-x64.zip`** 并解压到任意文件夹。
+2. 双击解压目录内的 `token-capsule.exe` 即可毫秒秒开。
+
+### 方式 3：单文件免安装独立版
+
+1. 下载 **`token-capsule.exe`**。
+2. 单文件拷走即用，启动时由系统临时解压运行。
+
+### 方式 4：Python 源码无控制台静默运行
 
 适合想通过 Python 运行但不想看到 CMD 黑框的用户：
 ```cmd
 tools\token-capsule\start_capsule_silent.vbs
 ```
 
-### 方式 3：开发者控制台启动
+### 方式 5：开发者控制台启动
 
 适合进行二次开发或查看调试日志：
 ```cmd

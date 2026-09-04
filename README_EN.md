@@ -10,7 +10,7 @@
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows-0078D6.svg?logo=windows)](#)
 [![Python: 3.10+](https://img.shields.io/badge/Python-3.10%2B-brightgreen.svg?logo=python)](#)
 [![GUI: PySide6](https://img.shields.io/badge/GUI-PySide6-41CD52.svg?logo=qt)](#)
-[![Release: v1.0.0](https://img.shields.io/badge/Release-v1.0.0-orange.svg)](https://github.com/lzpgood123/antigravity-token-capsule/releases)
+[![Release: v1.1.0](https://img.shields.io/badge/Release-v1.1.0-orange.svg)](https://github.com/lzpgood123/antigravity-token-capsule/releases)
 
 </div>
 
@@ -146,20 +146,30 @@ flowchart TD
 
 ## 🚀 Quick Start
 
-### Method 1: Pre-Built Standalone EXE (Recommended)
+### Method 1: Windows Installer (👑 Recommended)
 
-1. Download the latest `token-capsule.exe` from [GitHub Releases](https://github.com/lzpgood123/antigravity-token-capsule/releases).
-2. Double-click to launch.
-3. Keep Google Antigravity open. The capsule will lock onto your active session within milliseconds.
+1. Download **`token-capsule-Setup-v1.1.0.exe`** from [GitHub Releases](https://github.com/lzpgood123/antigravity-token-capsule/releases).
+2. Double-click to install (no administrator rights needed). Automatically generates desktop and start menu shortcuts.
+3. Launch and enjoy **millisecond-level instant startup (0.2s)**!
 
-### Method 2: Silent Background Launch (Python Source)
+### Method 2: Portable Green ZIP Package (Instant Launch)
+
+1. Download **`token-capsule-v1.1.0-windows-x64.zip`** and extract to any directory.
+2. Double-click `token-capsule.exe` inside the extracted folder for instant launch.
+
+### Method 3: Standalone Single-File EXE
+
+1. Download **`token-capsule.exe`**.
+2. Run directly with zero dependencies (has ~2s self-extraction delay on first boot).
+
+### Method 4: Silent Background Launch (Python Source)
 
 If you have Python installed and want to run silently without an open terminal window:
 ```cmd
 tools\token-capsule\start_capsule_silent.vbs
 ```
 
-### Method 3: Standard Console Launch (For Development)
+### Method 5: Standard Console Launch (For Development)
 
 If you want to view terminal logs while debugging:
 ```cmd
