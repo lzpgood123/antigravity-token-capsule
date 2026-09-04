@@ -6,7 +6,7 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QLabel, QPushButton,
-    QFrame, QComboBox, QApplication
+    QFrame, QComboBox, QApplication, QScrollArea, QSizePolicy
 )
 from data_engine import fmt_tokens
 
@@ -26,6 +26,7 @@ THEME_CONFIGS = {
         "cost_color": "#d97706",
         "bar_bg": "#f1f5f9",
         "sep_bg": "#f1f5f9",
+        "badge_bg": "#eff6ff",
     },
     "dark": {
         "name": "深邃暗夜 (Obsidian Dark)",
@@ -42,6 +43,7 @@ THEME_CONFIGS = {
         "cost_color": "#fbbf24",
         "bar_bg": "#1e293b",
         "sep_bg": "#334155",
+        "badge_bg": "#1e293b",
     },
     "glass": {
         "name": "磨砂极光 (Frosted Aurora)",
@@ -58,6 +60,7 @@ THEME_CONFIGS = {
         "cost_color": "#d97706",
         "bar_bg": "rgba(224, 242, 254, 0.8)",
         "sep_bg": "rgba(186, 230, 253, 0.7)",
+        "badge_bg": "rgba(224, 242, 254, 0.8)",
     },
     "cyberpunk": {
         "name": "赛博黑客 (Matrix Neon)",
@@ -74,6 +77,7 @@ THEME_CONFIGS = {
         "cost_color": "#facc15",
         "bar_bg": "#16233b",
         "sep_bg": "rgba(0, 240, 255, 0.4)",
+        "badge_bg": "#0f1a2e",
     },
     "warm": {
         "name": "暖阳纸墨 (Warm Paper)",
@@ -90,34 +94,56 @@ THEME_CONFIGS = {
         "cost_color": "#d97706",
         "bar_bg": "#eee5d8",
         "sep_bg": "#e7dfd5",
+        "badge_bg": "#f5efe6",
     }
 }
 
-def get_theme_file_path():
+def get_settings_file_path():
     app_dir = os.path.expanduser("~/.gemini/antigravity")
     os.makedirs(app_dir, exist_ok=True)
-    return os.path.join(app_dir, "capsule_theme.json")
+    return os.path.join(app_dir, "capsule_settings.json")
 
-def load_saved_theme() -> str:
-    path = get_theme_file_path()
-    if os.path.exists(path):
+def load_saved_settings() -> dict:
+    settings_path = get_settings_file_path()
+    theme_path = os.path.join(os.path.expanduser("~/.gemini/antigravity"), "capsule_theme.json")
+    settings = {"theme": "light", "layout_mode": "compact"}
+
+    if os.path.exists(settings_path):
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(settings_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                t = data.get("theme", "light")
-                if t in THEME_CONFIGS:
-                    return t
+                if data.get("theme") in THEME_CONFIGS:
+                    settings["theme"] = data["theme"]
+                if data.get("layout_mode") in ("compact", "dual_wing"):
+                    settings["layout_mode"] = data["layout_mode"]
+                return settings
         except Exception:
             pass
-    return "light"
+    elif os.path.exists(theme_path):
+        try:
+            with open(theme_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if data.get("theme") in THEME_CONFIGS:
+                    settings["theme"] = data["theme"]
+        except Exception:
+            pass
+    return settings
 
-def save_theme(theme_name: str):
-    path = get_theme_file_path()
+def save_settings(settings: dict):
+    path = get_settings_file_path()
     try:
         with open(path, "w", encoding="utf-8") as f:
-            json.dump({"theme": theme_name}, f, indent=2)
+            json.dump(settings, f, indent=2)
     except Exception:
         pass
+
+def load_saved_theme() -> str:
+    return load_saved_settings().get("theme", "light")
+
+def save_theme(theme_name: str):
+    st = load_saved_settings()
+    st["theme"] = theme_name
+    save_settings(st)
 
 def make_theme_qss(cfg):
     return f"""
@@ -134,7 +160,8 @@ QWidget#PillRoot {{
 }}
 
 QLabel {{
-    font-family: 'Segoe UI', -apple-system, system-ui, sans-serif;
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'SF Pro Text', Roboto, sans-serif;
+    color: {cfg['text_main']};
 }}
 
 QLabel#TitleLabel {{
@@ -191,6 +218,70 @@ QComboBox#ConvPicker QAbstractItemView {{
     border: 1px solid {cfg['border']};
     outline: none;
     font-size: 11px;
+}}
+
+/* Segmented Tab Bar */
+QFrame#TabBar {{
+    background-color: {cfg['combo_bg']};
+    border: 1px solid {cfg['border']};
+    border-radius: 8px;
+    padding: 2px;
+}}
+
+QPushButton.TabBtn {{
+    background-color: transparent;
+    color: {cfg['text_sub']};
+    border: none;
+    border-radius: 6px;
+    padding: 5px 8px;
+    font-size: 11px;
+    font-weight: 600;
+}}
+
+QPushButton.TabBtn[active="true"] {{
+    background-color: {cfg['card_bg']};
+    color: {cfg['text_main']};
+}}
+
+QPushButton.TabBtn:hover {{
+    color: {cfg['text_main']};
+}}
+
+/* Micro Dashboard Banner */
+QFrame#MicroDashboard {{
+    background-color: {cfg['combo_bg']};
+    border: 1px solid {cfg['border']};
+    border-radius: 10px;
+    padding: 6px 10px;
+}}
+
+/* Subagent Cards & Accordion */
+QFrame.SubagentCard {{
+    background-color: {cfg['combo_bg']};
+    border: 1px solid {cfg['border']};
+    border-radius: 9px;
+}}
+
+QFrame.SubagentCard:hover {{
+    border: 1px solid {cfg['accent']};
+    background-color: {cfg['hover_bg']};
+}}
+
+QFrame#SubagentDetail {{
+    background-color: {cfg['card_bg']};
+    border-top: 1px solid {cfg['border']};
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    padding: 6px;
+}}
+
+QScrollArea#SubagentScrollArea {{
+    background: transparent;
+    border: none;
+}}
+
+QScrollArea#SubagentScrollArea > QWidget > QWidget {{
+    background: transparent;
 }}
 
 QLabel.ItemLabel, QLabel[class="ItemLabel"] {{
@@ -252,16 +343,150 @@ class SegmentedProgressBar(QWidget):
                 painter.fillRect(current_x, 0, seg_w, rect.height(), color)
                 current_x += seg_w
 
+class SubagentCardWidget(QFrame):
+    def __init__(self, agent_data: dict, parent=None):
+        super().__init__(parent)
+        self.agent_data = agent_data
+        self.setObjectName("SubagentCard")
+        self.setProperty("class", "SubagentCard")
+        self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.init_ui()
+
+    def init_ui(self):
+        card_l = QVBoxLayout(self)
+        card_l.setContentsMargins(8, 7, 8, 7)
+        card_l.setSpacing(4)
+
+        # 1. Summary row
+        summary_row = QHBoxLayout()
+        summary_row.setContentsMargins(0, 0, 0, 0)
+        summary_row.setSpacing(7)
+
+        # Status dot
+        is_running = self.agent_data.get("state") == "running"
+        dot_color = "#10b981" if is_running else "#94a3b8"
+        self.status_dot = QLabel(self)
+        self.status_dot.setFixedSize(7, 7)
+        self.status_dot.setStyleSheet(f"background-color: {dot_color}; border-radius: 3px;")
+        summary_row.addWidget(self.status_dot)
+
+        # Role & type
+        name_box = QVBoxLayout()
+        name_box.setContentsMargins(0, 0, 0, 0)
+        name_box.setSpacing(1)
+
+        role = self.agent_data.get("role") or "Subagent"
+        self.lbl_role = QLabel(role, self)
+        self.lbl_role.setStyleSheet("font-size: 11px; font-weight: 700;")
+        name_box.addWidget(self.lbl_role)
+
+        sub_type = self.agent_data.get("type") or "子智能体"
+        state_str = "运行中" if is_running else "已完成"
+        self.lbl_sub = QLabel(f"{sub_type} · {state_str}", self)
+        self.lbl_sub.setStyleSheet("font-size: 9px; color: #64748b;")
+        name_box.addWidget(self.lbl_sub)
+        summary_row.addLayout(name_box, 1)
+
+        # Right metric
+        tot_tok = self.agent_data.get("totalTokens", 0)
+        cost = self.agent_data.get("costUsd", 0.0)
+
+        self.lbl_tok = QLabel(fmt_tokens(tot_tok), self)
+        self.lbl_tok.setStyleSheet("font-size: 11px; font-weight: 700;")
+        summary_row.addWidget(self.lbl_tok)
+
+        self.lbl_cost = QLabel(f"${cost:.3f}", self)
+        self.lbl_cost.setStyleSheet("font-size: 10px; font-weight: 600; color: #d97706;")
+        summary_row.addWidget(self.lbl_cost)
+
+        self.lbl_chevron = QLabel("▼", self)
+        self.lbl_chevron.setStyleSheet("font-size: 9px; color: #64748b;")
+        summary_row.addWidget(self.lbl_chevron)
+
+        card_l.addLayout(summary_row)
+
+        # 2. Detail body (initially hidden)
+        self.detail_frame = QFrame(self)
+        self.detail_frame.setObjectName("SubagentDetail")
+        self.detail_frame.setVisible(False)
+        detail_l = QVBoxLayout(self.detail_frame)
+        detail_l.setContentsMargins(4, 4, 4, 4)
+        detail_l.setSpacing(4)
+
+        grid = QVBoxLayout()
+        grid.setSpacing(2)
+
+        p_tok = self.agent_data.get("promptTokens", 0)
+        c_tok = self.agent_data.get("candidateTokens", 0)
+        th_tok = self.agent_data.get("thinkingTokens", 0)
+        ca_tok = self.agent_data.get("cachedTokens", 0)
+        ttft = self.agent_data.get("ttft", 0.0)
+        speed = self.agent_data.get("speed", 0.0)
+
+        row1 = QHBoxLayout()
+        row1.addWidget(self._make_label("输入 / 缓存:"))
+        row1.addWidget(self._make_val(f"{fmt_tokens(p_tok)} / {fmt_tokens(ca_tok)}"))
+        grid.addLayout(row1)
+
+        row2 = QHBoxLayout()
+        row2.addWidget(self._make_label("生成 / 思考:"))
+        row2.addWidget(self._make_val(f"{fmt_tokens(c_tok)} / {fmt_tokens(th_tok)}"))
+        grid.addLayout(row2)
+
+        row3 = QHBoxLayout()
+        row3.addWidget(self._make_label("首字 / 速度:"))
+        row3.addWidget(self._make_val(f"{ttft:.2f}s · {speed:.0f}t/s" if speed > 0 else f"{ttft:.2f}s"))
+        grid.addLayout(row3)
+
+        detail_l.addLayout(grid)
+
+        # Action note
+        last_action = self.agent_data.get("lastAction") or ("运行中..." if is_running else "已完成任务")
+        self.lbl_action = QLabel(f"⚡ {last_action}", self)
+        self.lbl_action.setWordWrap(True)
+        self.lbl_action.setStyleSheet("font-size: 9px; color: #64748b; margin-top: 2px;")
+        detail_l.addWidget(self.lbl_action)
+
+        card_l.addWidget(self.detail_frame)
+
+    def _make_label(self, text: str) -> QLabel:
+        lbl = QLabel(text, self)
+        lbl.setStyleSheet("font-size: 10px; color: #64748b;")
+        return lbl
+
+    def _make_val(self, text: str) -> QLabel:
+        lbl = QLabel(text, self)
+        lbl.setStyleSheet("font-size: 10px; font-weight: 600;")
+        return lbl
+
+    def toggle_accordion(self):
+        new_v = not self.detail_frame.isVisible()
+        self.detail_frame.setVisible(new_v)
+        self.lbl_chevron.setText("▲" if new_v else "▼")
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.toggle_accordion()
+            event.accept()
+        else:
+            super().mousePressEvent(event)
+
 class CapsuleWindow(QWidget):
     convo_selected = Signal(str)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, default_layout_mode=None):
         super().__init__(parent)
         self.is_expanded = True
         self.drag_position = QPoint()
-        self.max_context = 256_000  # 固定回 256K 压缩红线，视觉饱满清晰
+        self.max_context = 256_000
         self.latest_data = {}
-        self.current_theme = load_saved_theme()
+
+        # 加载设置：主题与布局模式
+        saved_settings = load_saved_settings()
+        self.current_theme = saved_settings.get("theme", "light")
+        self.layout_mode = default_layout_mode if default_layout_mode else saved_settings.get("layout_mode", "compact")
+        self.active_tab = "primary"  # "primary" or "cluster"
+        self.subagent_cards = []
 
         self.setWindowFlags(
             Qt.WindowType.WindowStaysOnTopHint |
@@ -271,10 +496,11 @@ class CapsuleWindow(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 
         self.init_ui()
+        self.set_layout_mode(self.layout_mode, save=False)
         self.set_theme(self.current_theme, save=False)
 
         screen = QGuiApplication.primaryScreen().availableGeometry()
-        self.move(screen.width() - 330, 50)
+        self.move(screen.width() - 350, 50)
 
     def get_current_theme(self) -> str:
         return self.current_theme
@@ -295,7 +521,6 @@ class CapsuleWindow(QWidget):
         if hasattr(self, 'pill_sep2'):
             self.pill_sep2.setStyleSheet(f"color: {cfg['border']}; font-size: 11px;")
 
-        # 如果当前没有超 100% 报警，清除 inline style 让 QSS 控制
         if hasattr(self, 'lbl_hero_pct') and hasattr(self, 'latest_data'):
             ctx = self.latest_data.get("activeContext", 0)
             if (ctx / self.max_context * 100) < 100.0:
@@ -309,14 +534,14 @@ class CapsuleWindow(QWidget):
         self.main_layout.setContentsMargins(0, 0, 0, 0)
         self.main_layout.setSpacing(0)
 
-        # ================= A. 展开态：用量卡片 (256.0K 黄金基准) =================
+        # ================= A. 展开态：主卡片 =================
         self.card_frame = QFrame(self)
         self.card_frame.setObjectName("CardRoot")
-        card_l = QVBoxLayout(self.card_frame)
-        card_l.setContentsMargins(18, 14, 18, 16)
-        card_l.setSpacing(10)
+        self.card_layout = QVBoxLayout(self.card_frame)
+        self.card_layout.setContentsMargins(16, 12, 16, 14)
+        self.card_layout.setSpacing(8)
 
-        # 1. 标题栏
+        # 1. 窗口标题栏
         top_bar = QHBoxLayout()
         top_bar.setContentsMargins(0, 0, 0, 0)
         top_bar.setSpacing(8)
@@ -337,64 +562,100 @@ class CapsuleWindow(QWidget):
         btn_close.clicked.connect(self.toggle_mode)
         top_bar.addWidget(btn_close)
 
-        card_l.addLayout(top_bar)
+        self.card_layout.addLayout(top_bar)
 
-        # 2. 核心大指标行 (e.g. 39.0% 已使用 99.9k/ 256.0K)
+        # 2. 顶部分段 Tab 切换组件 (方案 A 紧凑模式下呈现，方案 C 双翼模式下隐藏)
+        self.tab_bar = QFrame(self)
+        self.tab_bar.setObjectName("TabBar")
+        tab_l = QHBoxLayout(self.tab_bar)
+        tab_l.setContentsMargins(2, 2, 2, 2)
+        tab_l.setSpacing(2)
+
+        self.btn_tab_primary = QPushButton("💬 主会话", self.tab_bar)
+        self.btn_tab_primary.setProperty("class", "TabBtn")
+        self.btn_tab_primary.setProperty("active", "true")
+        self.btn_tab_primary.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.btn_tab_primary.clicked.connect(lambda: self.switch_tab("primary"))
+        tab_l.addWidget(self.btn_tab_primary)
+
+        self.btn_tab_cluster = QPushButton("🤖 智能体集群", self.tab_bar)
+        self.btn_tab_cluster.setProperty("class", "TabBtn")
+        self.btn_tab_cluster.setProperty("active", "false")
+        self.btn_tab_cluster.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.btn_tab_cluster.clicked.connect(lambda: self.switch_tab("cluster"))
+        tab_l.addWidget(self.btn_tab_cluster)
+
+        self.card_layout.addWidget(self.tab_bar)
+
+        # 3. 核心内容区域容器 (支持紧凑单卡垂直与双翼模式水平排列)
+        self.content_container = QWidget(self)
+        self.content_layout = QHBoxLayout(self.content_container)
+        self.content_layout.setContentsMargins(0, 0, 0, 0)
+        self.content_layout.setSpacing(14)
+
+        # --- 左翼 / 主会话视图 (view_primary) ---
+        self.view_primary = QWidget(self.content_container)
+        v_primary_l = QVBoxLayout(self.view_primary)
+        v_primary_l.setContentsMargins(0, 0, 0, 0)
+        v_primary_l.setSpacing(8)
+
+        # 双翼模式下的左翼标识
+        self.lbl_wing_primary = QLabel("💬 主会话物理窗口", self.view_primary)
+        self.lbl_wing_primary.setStyleSheet("font-size: 11px; font-weight: 700; color: #2563eb;")
+        self.lbl_wing_primary.setVisible(False)
+        v_primary_l.addWidget(self.lbl_wing_primary)
+
+        # 核心指标
         hero_box = QHBoxLayout()
-        hero_box.setContentsMargins(0, 2, 0, 0)
+        hero_box.setContentsMargins(0, 0, 0, 0)
         hero_box.setSpacing(8)
 
-        self.lbl_hero_pct = QLabel("0.0%", self)
+        self.lbl_hero_pct = QLabel("0.0%", self.view_primary)
         self.lbl_hero_pct.setObjectName("HeroPct")
         hero_box.addWidget(self.lbl_hero_pct)
 
-        self.lbl_hero_sub = QLabel("已使用 0K/ 256.0K", self)
+        self.lbl_hero_sub = QLabel("已使用 0K/ 256.0K", self.view_primary)
         self.lbl_hero_sub.setObjectName("HeroSub")
         hero_box.addWidget(self.lbl_hero_sub)
         hero_box.addStretch()
 
-        card_l.addLayout(hero_box)
+        v_primary_l.addLayout(hero_box)
 
-        # 3. 分段彩色进度条 (绿/橙/紫/青/蓝)
-        self.prog_bar = SegmentedProgressBar(self)
-        card_l.addWidget(self.prog_bar)
+        # 进度条
+        self.prog_bar = SegmentedProgressBar(self.view_primary)
+        v_primary_l.addWidget(self.prog_bar)
 
-        # 4. 参考图对应的 5 大构成指标列表
+        # 5 大构成
         self.breakdown_layout = QVBoxLayout()
-        self.breakdown_layout.setContentsMargins(0, 4, 0, 0)
-        self.breakdown_layout.setSpacing(8)
+        self.breakdown_layout.setContentsMargins(0, 2, 0, 0)
+        self.breakdown_layout.setSpacing(6)
 
-        # 🟢 系统提示词
         self.r_sys, self.val_sys = self.create_list_row("#10b981", "系统提示词")
         self.breakdown_layout.addLayout(self.r_sys)
 
-        # 🟠 工具及子智能体
         self.r_tools, self.val_tools = self.create_list_row("#f59e0b", "工具及子智能体")
         self.breakdown_layout.addLayout(self.r_tools)
 
-        # 🟣 对话消息
         self.r_msg, self.val_msg = self.create_list_row("#8b5cf6", "对话消息")
         self.breakdown_layout.addLayout(self.r_msg)
 
-        # 🔵 连接器及MCP
         self.r_mcp, self.val_mcp = self.create_list_row("#06b6d4", "连接器及MCP")
         self.breakdown_layout.addLayout(self.r_mcp)
 
-        # 🔵 技能
         self.r_skills, self.val_skills = self.create_list_row("#3b82f6", "技能")
         self.breakdown_layout.addLayout(self.r_skills)
 
-        card_l.addLayout(self.breakdown_layout)
+        v_primary_l.addLayout(self.breakdown_layout)
 
-        # 5. 分割线
-        self.sep_line = QFrame(self)
+        # 分割线
+        self.sep_line = QFrame(self.view_primary)
         self.sep_line.setFrameShape(QFrame.Shape.HLine)
         self.sep_line.setStyleSheet("background-color: #f1f5f9; max-height: 1px;")
-        card_l.addWidget(self.sep_line)
+        v_primary_l.addWidget(self.sep_line)
 
-        # 6. 会话计费与输出指标 (融合保留)
+        # 会话计费与输出指标
         summary_box = QVBoxLayout()
-        summary_box.setSpacing(6)
+        summary_box.setSpacing(5)
 
         self.r_cache, self.val_cache = self.create_list_row("#10b981", "Prompt 缓存命中")
         summary_box.addLayout(self.r_cache)
@@ -411,7 +672,97 @@ class CapsuleWindow(QWidget):
         self.r_cost, self.val_cost = self.create_list_row("#d97706", "累计折算费用")
         summary_box.addLayout(self.r_cost)
 
-        card_l.addLayout(summary_box)
+        v_primary_l.addLayout(summary_box)
+        self.content_layout.addWidget(self.view_primary, 1)
+
+        # --- 双翼模式中缝分割线 (wing_divider) ---
+        self.wing_divider = QFrame(self.content_container)
+        self.wing_divider.setObjectName("WingDivider")
+        self.wing_divider.setFrameShape(QFrame.Shape.VLine)
+        self.wing_divider.setStyleSheet("background-color: #e2e8f0; width: 1px;")
+        self.wing_divider.setVisible(False)
+        self.content_layout.addWidget(self.wing_divider)
+
+        # --- 右翼 / 集群雷达视图 (view_cluster) ---
+        self.view_cluster = QWidget(self.content_container)
+        v_cluster_l = QVBoxLayout(self.view_cluster)
+        v_cluster_l.setContentsMargins(0, 0, 0, 0)
+        v_cluster_l.setSpacing(8)
+
+        # 双翼模式下的右翼头部标题
+        self.wing_header_box = QHBoxLayout()
+        self.lbl_wing_cluster = QLabel("🤖 智能体集群雷达", self.view_cluster)
+        self.lbl_wing_cluster.setStyleSheet("font-size: 11px; font-weight: 700; color: #2563eb;")
+        self.wing_header_box.addWidget(self.lbl_wing_cluster)
+        self.lbl_wing_count = QLabel("共 0 个智能体", self.view_cluster)
+        self.lbl_wing_count.setStyleSheet("font-size: 10px; color: #64748b;")
+        self.wing_header_box.addWidget(self.lbl_wing_count, 0, Qt.AlignmentFlag.AlignRight)
+        self.lbl_wing_cluster.setVisible(False)
+        self.lbl_wing_count.setVisible(False)
+        v_cluster_l.addLayout(self.wing_header_box)
+
+        # 微仪表盘横条 (Micro-Dashboard)
+        self.micro_dashboard = QFrame(self.view_cluster)
+        self.micro_dashboard.setObjectName("MicroDashboard")
+        micro_l = QHBoxLayout(self.micro_dashboard)
+        micro_l.setContentsMargins(8, 6, 8, 6)
+        micro_l.setSpacing(6)
+
+        m_metric_box = QVBoxLayout()
+        m_metric_box.setSpacing(1)
+        lbl_m_title = QLabel("集群总消耗", self.micro_dashboard)
+        lbl_m_title.setStyleSheet("font-size: 9px; color: #64748b; font-weight: 700;")
+        m_metric_box.addWidget(lbl_m_title)
+
+        self.micro_metric_val = QLabel("0 tok · $0.000", self.micro_dashboard)
+        self.micro_metric_val.setStyleSheet("font-size: 11px; font-weight: 700;")
+        m_metric_box.addWidget(self.micro_metric_val)
+        micro_l.addLayout(m_metric_box, 1)
+
+        self.micro_status_pill = QLabel("0 运行 · 0 完成", self.micro_dashboard)
+        self.micro_status_pill.setStyleSheet("font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 8px;")
+        micro_l.addWidget(self.micro_status_pill)
+
+        v_cluster_l.addWidget(self.micro_dashboard)
+
+        # 子智能体滚动列表
+        self.scroll_area = QScrollArea(self.view_cluster)
+        self.scroll_area.setObjectName("SubagentScrollArea")
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+
+        self.scroll_content = QWidget()
+        self.subagent_list_layout = QVBoxLayout(self.scroll_content)
+        self.subagent_list_layout.setContentsMargins(0, 0, 0, 0)
+        self.subagent_list_layout.setSpacing(6)
+        self.subagent_list_layout.addStretch()
+
+        self.scroll_area.setWidget(self.scroll_content)
+        v_cluster_l.addWidget(self.scroll_area, 1)
+
+        # 暂无子智能体空态展示
+        self.empty_cluster_lbl = QLabel("当前主会话暂无派生的子智能体\n派发后将自动实时呈现于此", self.view_cluster)
+        self.empty_cluster_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.empty_cluster_lbl.setStyleSheet("font-size: 11px; color: #64748b; padding: 20px 0;")
+        v_cluster_l.addWidget(self.empty_cluster_lbl)
+
+        # 全局双计费总额条 (在双翼雷达模式底部展示)
+        self.global_rollup_box = QFrame(self.view_cluster)
+        self.global_rollup_box.setStyleSheet("border-radius: 6px; padding: 4px 8px;")
+        g_box_l = QHBoxLayout(self.global_rollup_box)
+        g_box_l.setContentsMargins(4, 3, 4, 3)
+        self.lbl_global_title = QLabel("全局总计 (主会话 + 集群):", self.global_rollup_box)
+        self.lbl_global_title.setStyleSheet("font-size: 11px; font-weight: 600; color: #64748b;")
+        g_box_l.addWidget(self.lbl_global_title)
+        self.lbl_global_val = QLabel("$0.000", self.global_rollup_box)
+        self.lbl_global_val.setStyleSheet("font-size: 12px; font-weight: 800; color: #d97706;")
+        g_box_l.addWidget(self.lbl_global_val, 0, Qt.AlignmentFlag.AlignRight)
+        self.global_rollup_box.setVisible(False)
+        v_cluster_l.addWidget(self.global_rollup_box)
+
+        self.content_layout.addWidget(self.view_cluster, 1)
+        self.card_layout.addWidget(self.content_container)
         self.main_layout.addWidget(self.card_frame)
 
         # ================= B. 收起态：迷你悬浮小胶囊 =================
@@ -455,8 +806,55 @@ class CapsuleWindow(QWidget):
         self.pill_frame.setVisible(False)
         self.main_layout.addWidget(self.pill_frame)
 
-        self.setFixedWidth(310)
+    def set_layout_mode(self, mode: str, save: bool = True):
+        """动态切换紧凑单卡 (compact, 320px) 或展开双翼 (dual_wing, 680px) 模式"""
+        if mode not in ("compact", "dual_wing"):
+            mode = "compact"
+        self.layout_mode = mode
+
+        if mode == "compact":
+            self.setFixedWidth(320)
+            self.card_frame.setFixedWidth(320)
+            self.tab_bar.setVisible(True)
+            self.wing_divider.setVisible(False)
+            self.lbl_wing_primary.setVisible(False)
+            self.lbl_wing_cluster.setVisible(False)
+            self.lbl_wing_count.setVisible(False)
+            self.global_rollup_box.setVisible(False)
+            self.switch_tab(self.active_tab)
+        else:  # dual_wing
+            self.setFixedWidth(680)
+            self.card_frame.setFixedWidth(680)
+            self.tab_bar.setVisible(False)
+            self.wing_divider.setVisible(True)
+            self.lbl_wing_primary.setVisible(True)
+            self.lbl_wing_cluster.setVisible(True)
+            self.lbl_wing_count.setVisible(True)
+            self.global_rollup_box.setVisible(True)
+            self.view_primary.setVisible(True)
+            self.view_cluster.setVisible(True)
+
+        if save:
+            save_settings({"theme": self.current_theme, "layout_mode": self.layout_mode})
         self.adjustSize()
+
+    def switch_tab(self, tab_name: str):
+        """紧凑单卡模式下切换主会话与集群标签页"""
+        self.active_tab = tab_name
+        is_primary = (tab_name == "primary")
+
+        self.btn_tab_primary.setProperty("active", "true" if is_primary else "false")
+        self.btn_tab_cluster.setProperty("active", "false" if is_primary else "true")
+
+        self.btn_tab_primary.style().unpolish(self.btn_tab_primary)
+        self.btn_tab_primary.style().polish(self.btn_tab_primary)
+        self.btn_tab_cluster.style().unpolish(self.btn_tab_cluster)
+        self.btn_tab_cluster.style().polish(self.btn_tab_cluster)
+
+        if self.layout_mode == "compact":
+            self.view_primary.setVisible(is_primary)
+            self.view_cluster.setVisible(not is_primary)
+            self.adjustSize()
 
     def create_list_row(self, color_hex: str, label_text: str):
         h = QHBoxLayout()
@@ -488,8 +886,10 @@ class CapsuleWindow(QWidget):
         active_ctx = data.get("activeContext", 0)
         breakdown = data.get("breakdown", {})
         cum = data.get("cumulative", {})
+        cluster = data.get("cluster", {})
+        subagents = cluster.get("subagents", [])
 
-        # 1. 核心大字号百分比 (基于 256k 平台截断基准计算)
+        # 1. 核心大字号百分比 (基于 256k 截断基准)
         ctx_pct = (active_ctx / self.max_context * 100) if self.max_context > 0 else 0.0
         self.lbl_hero_pct.setText(f"{ctx_pct:.1f}%")
         if ctx_pct >= 100.0:
@@ -499,7 +899,7 @@ class CapsuleWindow(QWidget):
             self.lbl_hero_pct.setStyleSheet("")
             self.lbl_hero_sub.setText(f"已使用 {fmt_tokens(active_ctx)} / 256k")
 
-        # 2. 分段多彩进度条 (基于 256.0K 饱满比例)
+        # 2. 分段多彩进度条
         b_sys = breakdown.get("system", {}).get("tokens", 0)
         b_tools = breakdown.get("tools", {}).get("tokens", 0)
         b_msg = breakdown.get("messages", {}).get("tokens", 0)
@@ -521,7 +921,7 @@ class CapsuleWindow(QWidget):
         self.val_mcp.setText(f"{breakdown.get('mcp', {}).get('pct', 0.0):.1f}% ({fmt_tokens(b_mcp)})")
         self.val_skills.setText(f"{breakdown.get('skills', {}).get('pct', 0.0):.1f}% ({fmt_tokens(b_skills)})")
 
-        # 4. 会话财务与产出
+        # 4. 会话财务与产出 + 双计费联动 (Q3)
         cum_ca = cum.get("cachedTokens", 0)
         cum_ratio = cum.get("cacheRatio", 0.0)
         cum_c = cum.get("candidateTokens", 0)
@@ -556,9 +956,51 @@ class CapsuleWindow(QWidget):
         else:
             self.val_speed.setText("-")
 
-        self.val_cost.setText(f"${cum_cost:.3f} (计费 {fmt_tokens(cum_billed)})")
+        # 双计费联动展示: $0.081 (含集群: $0.235)
+        combined_cost = cluster.get("combinedCostUsd", cum_cost)
+        cluster_cost = cluster.get("totalCostUsd", 0.0)
+        if cluster_cost > 0:
+            self.val_cost.setText(f"${cum_cost:.3f} (含集群: ${combined_cost:.3f})")
+        else:
+            self.val_cost.setText(f"${cum_cost:.3f} (计费 {fmt_tokens(cum_billed)})")
 
-        # 5. 收起药丸态
+        # 5. 更新智能体集群 Tab 徽章与微仪表盘
+        sub_count = len(subagents)
+        running_cnt = cluster.get("runningCount", cluster.get("activeCount", 0))
+        done_cnt = cluster.get("doneCount", cluster.get("completedCount", 0))
+        cluster_tokens = cluster.get("totalTokens", 0)
+
+        if sub_count > 0:
+            self.btn_tab_cluster.setText(f"🤖 智能体集群 • {sub_count}")
+        else:
+            self.btn_tab_cluster.setText("🤖 智能体集群")
+
+        self.micro_metric_val.setText(f"{fmt_tokens(cluster_tokens)} · ${cluster_cost:.3f}")
+        self.micro_status_pill.setText(f"🟢 {running_cnt} 运行 · ⚪ {done_cnt} 完成")
+
+        self.lbl_wing_count.setText(f"共 {sub_count} 个智能体")
+        self.lbl_global_val.setText(f"${combined_cost:.3f}")
+
+        # 6. 渲染子智能体列表
+        # 清除旧卡片
+        for card in self.subagent_cards:
+            self.subagent_list_layout.removeWidget(card)
+            card.deleteLater()
+        self.subagent_cards.clear()
+
+        if sub_count == 0:
+            self.empty_cluster_lbl.setVisible(True)
+            self.scroll_area.setVisible(False)
+        else:
+            self.empty_cluster_lbl.setVisible(False)
+            self.scroll_area.setVisible(True)
+            for s in subagents:
+                card = SubagentCardWidget(s, self.scroll_content)
+                self.subagent_cards.append(card)
+                # 插入在 stretch 之前
+                self.subagent_list_layout.insertWidget(self.subagent_list_layout.count() - 1, card)
+
+        # 7. 收起迷你药丸态
         self.pill_info.setText(f"{ctx_pct:.1f}% 上下文")
         if turn_ttft > 0 and turn_speed > 0:
             self.pill_perf.setText(f"{turn_ttft:.1f}s · {turn_speed:.0f}t/s")
@@ -567,7 +1009,7 @@ class CapsuleWindow(QWidget):
         else:
             self.pill_perf.setVisible(False)
             self.pill_sep2.setVisible(False)
-        self.pill_cost_lbl.setText(f"${cum_cost:.2f}")
+        self.pill_cost_lbl.setText(f"${combined_cost:.2f}" if cluster_cost > 0 else f"${cum_cost:.2f}")
 
         title = data.get("title", "")
         cid = data.get("conversationId", "")
