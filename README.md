@@ -10,7 +10,7 @@
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows-0078D6.svg?logo=windows)](#)
 [![Python: 3.10+](https://img.shields.io/badge/Python-3.10%2B-brightgreen.svg?logo=python)](#)
 [![GUI: PySide6](https://img.shields.io/badge/GUI-PySide6-41CD52.svg?logo=qt)](#)
-[![Release: v1.1.1](https://img.shields.io/badge/Release-v1.1.1-orange.svg)](https://github.com/lzpgood123/antigravity-token-capsule/releases)
+[![Release: v1.2.0](https://img.shields.io/badge/Release-v1.2.0-orange.svg)](https://github.com/lzpgood123/antigravity-token-capsule/releases)
 
 </div>
 

@@ -2,7 +2,7 @@
 ; Produces professional Windows installer (.exe) unpacking the high-performance onedir bundle
 
 #define MyAppName "Antigravity Token Capsule"
-#define MyAppVersion "1.1.1"
+#define MyAppVersion "1.2.0"
 #define MyAppPublisher "lzpgood123"
 #define MyAppURL "https://github.com/lzpgood123/antigravity-token-capsule"
 #define MyAppExeName "token-capsule.exe"
