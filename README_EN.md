@@ -15,6 +15,12 @@
 </div>
 
 <p align="center">
+  <img src="docs/images/00-demo.gif" alt="Antigravity Token Capsule Demo" width="400px" />
+  <br />
+  <em>🎬 8-Second Interactive Demo: Pill Mode ➔ In-situ Expansion ➔ Subagent Cluster Tree ➔ Cyberpunk Neon ➔ Seamless Loop</em>
+</p>
+
+<p align="center">
   <img src="docs/images/01-hero-antigravity.png" alt="Antigravity Token Capsule Hero Showcase" width="100%" />
 </p>
 

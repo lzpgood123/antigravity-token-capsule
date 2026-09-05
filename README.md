@@ -15,6 +15,12 @@
 </div>
 
 <p align="center">
+  <img src="docs/images/00-demo.gif" alt="Antigravity Token Capsule Demo" width="400px" />
+  <br />
+  <em>🎬 8 秒交互巡礼：极简药丸态 ➔ 原地平滑展开 ➔ Subagent 集群监控 ➔ 赛博暗黑换肤 ➔ 丝滑无限循环</em>
+</p>
+
+<p align="center">
   <img src="docs/images/01-hero-antigravity.png" alt="Antigravity Token Capsule 桌面监控全景展示" width="100%" />
 </p>
 
