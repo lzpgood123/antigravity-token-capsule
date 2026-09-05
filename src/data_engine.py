@@ -528,14 +528,35 @@ class DataEngine(QObject):
         ttft_list = []
         cum_cand_time = 0.0
         latest = {}
+        rows = []
+        conn = None
 
         try:
             conn = sqlite3.connect(f"file:{clean_path}?mode=ro", uri=True, timeout=0.8)
             c = conn.cursor()
             c.execute("SELECT idx, data FROM gen_metadata ORDER BY idx ASC")
             rows = c.fetchall()
-            conn.close()
+        except Exception:
+            return {
+                "promptTokens": 0,
+                "candidateTokens": 0,
+                "cachedTokens": 0,
+                "thinkingTokens": 0,
+                "billedTokens": 0,
+                "costUsd": 0.0,
+                "avgTtft": 0.0,
+                "avgSpeed": 0.0,
+                "latest": {},
+                "has_data": False
+            }
+        finally:
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
+        try:
             for idx, blob in rows:
                 u = extract_usage_from_blob(blob)
                 if u:

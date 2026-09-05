@@ -447,7 +447,8 @@ class SubagentCardWidget(QFrame):
         self.init_ui()
 
     def init_ui(self):
-        card_l = QVBoxLayout(self)
+        self.card_l = QVBoxLayout(self)
+        card_l = self.card_l
         margins = (6, 5, 6, 5) if self.depth > 1 else (8, 7, 8, 7)
         card_l.setContentsMargins(*margins)
         card_l.setSpacing(4)
@@ -549,22 +550,26 @@ class SubagentCardWidget(QFrame):
 
         row0 = QHBoxLayout()
         row0.addWidget(self._make_label("直属计费 (入+出):"))
-        row0.addWidget(self._make_val(f"{fmt_tokens(tot_tok)} (${cost:.3f})"))
+        self.val_row0 = self._make_val(f"{fmt_tokens(tot_tok)} (${cost:.3f})")
+        row0.addWidget(self.val_row0)
         grid.addLayout(row0)
 
         row1 = QHBoxLayout()
         row1.addWidget(self._make_label("输入 / 缓存命中:"))
-        row1.addWidget(self._make_val(f"{fmt_tokens(p_tok)} / {fmt_tokens(ca_tok)}"))
+        self.val_row1 = self._make_val(f"{fmt_tokens(p_tok)} / {fmt_tokens(ca_tok)}")
+        row1.addWidget(self.val_row1)
         grid.addLayout(row1)
 
         row2 = QHBoxLayout()
         row2.addWidget(self._make_label("模型输出 / 思考:"))
-        row2.addWidget(self._make_val(f"{fmt_tokens(c_tok)} / {fmt_tokens(th_tok)}"))
+        self.val_row2 = self._make_val(f"{fmt_tokens(c_tok)} / {fmt_tokens(th_tok)}")
+        row2.addWidget(self.val_row2)
         grid.addLayout(row2)
 
         row3 = QHBoxLayout()
         row3.addWidget(self._make_label("首字响应 / 速度:"))
-        row3.addWidget(self._make_val(f"{ttft:.2f}s · {speed:.0f}t/s" if speed > 0 else f"{ttft:.2f}s"))
+        self.val_row3 = self._make_val(f"{ttft:.2f}s · {speed:.0f}t/s" if speed > 0 else f"{ttft:.2f}s")
+        row3.addWidget(self.val_row3)
         grid.addLayout(row3)
 
         detail_l.addLayout(grid)
@@ -578,23 +583,41 @@ class SubagentCardWidget(QFrame):
 
         card_l.addWidget(self.detail_frame)
 
-        # 3. Branch row & nested children (Option A: 树形级联折叠)
-        if self.children_data:
-            def _calc_branch_totals(child_list):
-                tot_t = 0
-                tot_c = 0.0
-                for c in child_list:
-                    tot_t += c.get("totalTokens", 0)
-                    tot_c += c.get("costUsd", 0.0)
-                    if c.get("children"):
-                        st, sc = _calc_branch_totals(c["children"])
-                        tot_t += st
-                        tot_c += sc
-                return tot_t, tot_c
+        # 3. Branch row & nested children (Option A: 树形级联折叠，增量同步)
+        self._sync_branch_and_children()
 
-            branch_tok, branch_cost = _calc_branch_totals(self.children_data)
+    @staticmethod
+    def _calc_branch_totals(child_list):
+        tot_t = 0
+        tot_c = 0.0
+        for c in child_list:
+            tot_t += c.get("totalTokens", 0)
+            tot_c += c.get("costUsd", 0.0)
+            if c.get("children"):
+                st, sc = SubagentCardWidget._calc_branch_totals(c["children"])
+                tot_t += st
+                tot_c += sc
+        return tot_t, tot_c
 
-            self.branch_row = QHBoxLayout()
+    def _sync_branch_and_children(self):
+        if not self.children_data:
+            if hasattr(self, 'branch_row_frame'):
+                self.branch_row_frame.setVisible(False)
+            if hasattr(self, 'children_container'):
+                self.children_container.setVisible(False)
+                for c in self.child_widgets:
+                    self.children_layout.removeWidget(c)
+                    c.deleteLater()
+                self.child_widgets.clear()
+            return
+
+        agent_id = self.agent_data.get("id")
+        is_branch_open = (agent_id in self.expanded_branches) if agent_id else False
+        branch_tok, branch_cost = self._calc_branch_totals(self.children_data)
+
+        if not hasattr(self, 'children_container'):
+            self.branch_row_frame = QWidget(self)
+            self.branch_row = QHBoxLayout(self.branch_row_frame)
             self.branch_row.setContentsMargins(2, 2, 0, 0)
             self.branch_row.setSpacing(6)
 
@@ -608,37 +631,129 @@ class SubagentCardWidget(QFrame):
             self.lbl_branch_summary.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
             self.branch_row.addWidget(self.lbl_branch_summary, 1)
 
-            agent_id = self.agent_data.get("id")
-            is_branch_open = (agent_id in self.expanded_branches) if agent_id else False
-
             self.btn_toggle_branch = QPushButton("收起子任务 ▲" if is_branch_open else "展开子任务 ▼", self)
             self.btn_toggle_branch.setProperty("class", "BranchToggleBtn")
             self.btn_toggle_branch.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
             self.btn_toggle_branch.clicked.connect(self.toggle_branch)
             self.branch_row.addWidget(self.btn_toggle_branch)
 
-            card_l.addLayout(self.branch_row)
+            self.card_l.addWidget(self.branch_row_frame)
 
-            # Children container (persists user branch expansion state)
             self.children_container = QFrame(self)
             self.children_container.setObjectName("ChildrenContainer")
             self.children_container.setProperty("class", "ChildrenContainer")
             self.children_container.setVisible(is_branch_open)
-            children_layout = QVBoxLayout(self.children_container)
-            children_layout.setContentsMargins(4, 2, 0, 2)
-            children_layout.setSpacing(4)
+            self.children_layout = QVBoxLayout(self.children_container)
+            self.children_layout.setContentsMargins(4, 2, 0, 2)
+            self.children_layout.setSpacing(4)
+            self.card_l.addWidget(self.children_container)
+        else:
+            self.branch_row_frame.setVisible(True)
+            self.lbl_branch_summary.setText(
+                f"↳ 派生 {len(self.children_data)} 个子任务 ({fmt_tokens(branch_tok)} · ${branch_cost:.3f})"
+            )
+            self.btn_toggle_branch.setText("收起子任务 ▲" if is_branch_open else "展开子任务 ▼")
+            self.children_container.setVisible(is_branch_open)
 
-            for child_data in self.children_data:
+        # 增量 diff 复用子组件
+        existing_children_by_id = {c.agent_data.get("id"): c for c in self.child_widgets if c.agent_data.get("id")}
+        new_ids = {c.get("id") for c in self.children_data if c.get("id")}
+
+        # 移除已失效的子卡片
+        surviving = []
+        for c in self.child_widgets:
+            cid = c.agent_data.get("id")
+            if cid and cid in new_ids:
+                surviving.append(c)
+            else:
+                self.children_layout.removeWidget(c)
+                c.deleteLater()
+        self.child_widgets = surviving
+
+        # 增量复用或添加
+        updated_child_widgets = []
+        for child_data in self.children_data:
+            cid = child_data.get("id")
+            if cid and cid in existing_children_by_id:
+                child_card = existing_children_by_id[cid]
+                child_card.update_agent_data(child_data)
+            else:
                 child_card = SubagentCardWidget(
                     child_data,
                     self.children_container,
                     expanded_branches=self.expanded_branches,
                     expanded_accordions=self.expanded_accordions
                 )
-                self.child_widgets.append(child_card)
-                children_layout.addWidget(child_card)
+                self.children_layout.addWidget(child_card)
+            updated_child_widgets.append(child_card)
+            child_card.show()
+        self.child_widgets = updated_child_widgets
 
-            card_l.addWidget(self.children_container)
+    def update_agent_data(self, agent_data: dict):
+        self.agent_data = agent_data
+        self.depth = agent_data.get("depth", self.depth)
+        self.children_data = agent_data.get("children", [])
+
+        # 1. 状态点
+        is_running = self.agent_data.get("state") == "running"
+        dot_color = "#10b981" if is_running else "#94a3b8"
+        self.status_dot.setStyleSheet(f"background-color: {dot_color}; border-radius: 3px;")
+
+        # 2. 角色与类型
+        role = self.agent_data.get("role") or "Subagent"
+        self.lbl_role.setText(role)
+        sub_type = self.agent_data.get("type") or "子智能体"
+        clean_type = re.sub(r'([a-z])([A-Z])', r'\1 \2', sub_type)
+        if len(clean_type) > 22:
+            clean_type = clean_type[:20] + "..."
+        state_str = "运行中" if is_running else "已完成"
+        depth_tag = f"L{self.depth} · " if self.depth > 1 else ""
+        self.lbl_sub.setText(f"{depth_tag}{clean_type} · {state_str}")
+
+        # 3. 计量
+        tot_tok = self.agent_data.get("totalTokens", 0)
+        cost = self.agent_data.get("costUsd", 0.0)
+        p_tok = self.agent_data.get("promptTokens", 0)
+        c_tok = self.agent_data.get("candidateTokens", 0)
+        th_tok = self.agent_data.get("thinkingTokens", 0)
+        ca_tok = self.agent_data.get("cachedTokens", 0)
+        ttft = self.agent_data.get("ttft", 0.0)
+        speed = self.agent_data.get("speed", 0.0)
+
+        self.lbl_tok.setText(f"计费 {fmt_tokens(tot_tok)}")
+        self.lbl_cost.setText(f"${cost:.3f}")
+
+        # 4. Tooltip
+        card_tip = (
+            f"【{role}】({sub_type} · {state_str})\n"
+            f"• 计费总量: {fmt_tokens(tot_tok)} (输入: {fmt_tokens(p_tok)} + 输出: {fmt_tokens(c_tok)})\n"
+            f"• Prompt 缓存命中: {fmt_tokens(ca_tok)}\n"
+            f"• 累计折算费用: ${cost:.3f}\n"
+            f"点击展开指标详情"
+        )
+        self.setToolTip(card_tip)
+
+        # 5. 详情展开态
+        agent_id = self.agent_data.get("id")
+        is_accordion_open = (agent_id in self.expanded_accordions) if agent_id else False
+        self.detail_frame.setVisible(is_accordion_open)
+        self.lbl_chevron.setText("▲" if is_accordion_open else "▼")
+
+        if hasattr(self, 'val_row0'):
+            self.val_row0.setText(f"{fmt_tokens(tot_tok)} (${cost:.3f})")
+        if hasattr(self, 'val_row1'):
+            self.val_row1.setText(f"{fmt_tokens(p_tok)} / {fmt_tokens(ca_tok)}")
+        if hasattr(self, 'val_row2'):
+            self.val_row2.setText(f"{fmt_tokens(c_tok)} / {fmt_tokens(th_tok)}")
+        if hasattr(self, 'val_row3'):
+            self.val_row3.setText(f"{ttft:.2f}s · {speed:.0f}t/s" if speed > 0 else f"{ttft:.2f}s")
+
+        # 6. Action
+        last_action = self.agent_data.get("lastAction") or ("运行中..." if is_running else "已完成任务")
+        self.lbl_action.setText(f"⚡ {last_action}")
+
+        # 7. 递归级联分支与子节点
+        self._sync_branch_and_children()
 
     def _make_label(self, text: str) -> QLabel:
         lbl = QLabel(text, self)
@@ -1248,34 +1363,64 @@ class CapsuleWindow(QWidget):
         self.lbl_wing_count.setText(f"共 {sub_count} 个 Subagent")
         self.lbl_global_val.setText(f"${combined_cost:.3f}")
 
-        # 6. 渲染子智能体列表
+        # 6. 增量渲染子智能体列表 (Widget Diff & In-Place Recycling)
         # 记录垂直滚动条位置，防止重绘时滚动条跳回顶部
         scroll_bar = self.scroll_area.verticalScrollBar()
         scroll_pos = scroll_bar.value() if scroll_bar else 0
 
-        # 清除旧卡片
-        for card in self.subagent_cards:
-            self.subagent_list_layout.removeWidget(card)
-            card.deleteLater()
-        self.subagent_cards.clear()
+        # 若会话改变，清空旧会话卡片
+        conv_id = data.get("conversationId", "")
+        if getattr(self, "_current_rendered_conv_id", "") != conv_id:
+            self._current_rendered_conv_id = conv_id
+            for card in self.subagent_cards:
+                self.subagent_list_layout.removeWidget(card)
+                card.deleteLater()
+            self.subagent_cards.clear()
 
         if sub_count == 0:
             self.empty_cluster_lbl.setVisible(True)
             self.scroll_area.setVisible(False)
+            for card in self.subagent_cards:
+                self.subagent_list_layout.removeWidget(card)
+                card.deleteLater()
+            self.subagent_cards.clear()
         else:
             self.empty_cluster_lbl.setVisible(False)
             self.scroll_area.setVisible(True)
-            for s in subagents:
-                card = SubagentCardWidget(
-                    s,
-                    self.scroll_content,
-                    expanded_branches=self.expanded_branches,
-                    expanded_accordions=self.expanded_accordions
-                )
-                self.subagent_cards.append(card)
-                # 插入在 stretch 之前
-                self.subagent_list_layout.insertWidget(self.subagent_list_layout.count() - 1, card)
+
+            existing_cards_by_id = {c.agent_data.get("id"): c for c in self.subagent_cards if c.agent_data.get("id")}
+            new_ids = {s.get("id") for s in subagents if s.get("id")}
+
+            # 移除已失效的旧卡片
+            for card in list(self.subagent_cards):
+                cid = card.agent_data.get("id")
+                if not cid or cid not in new_ids:
+                    self.subagent_list_layout.removeWidget(card)
+                    card.deleteLater()
+                    self.subagent_cards.remove(card)
+
+            # 增量复用或添加新卡片
+            updated_cards = []
+            for i, s in enumerate(subagents):
+                cid = s.get("id")
+                if cid and cid in existing_cards_by_id:
+                    card = existing_cards_by_id[cid]
+                    card.update_agent_data(s)
+                else:
+                    card = SubagentCardWidget(
+                        s,
+                        self.scroll_content,
+                        expanded_branches=self.expanded_branches,
+                        expanded_accordions=self.expanded_accordions
+                    )
+                    # 插入在 stretch 之前 (即倒数第 1 个元素前)
+                    insert_idx = max(0, self.subagent_list_layout.count() - 1)
+                    self.subagent_list_layout.insertWidget(insert_idx, card)
+
+                updated_cards.append(card)
                 card.show()
+
+            self.subagent_cards = updated_cards
 
             if scroll_bar:
                 scroll_bar.setValue(scroll_pos)

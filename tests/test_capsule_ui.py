@@ -621,5 +621,125 @@ def test_branch_and_accordion_expansion_persistence_across_updates(window):
     assert "计费 15.0k" in new_child.lbl_tok.text()
 
 
+def test_subagent_cards_incremental_diff_and_recycling(window):
+    """Verifies that SubagentCardWidget instances are recycled in-place across live polling updates."""
+    sub1 = {
+        "id": "sub-recycle-1",
+        "role": "Worker 1",
+        "type": "worker",
+        "state": "running",
+        "totalTokens": 5000,
+        "costUsd": 0.005,
+        "promptTokens": 4000,
+        "candidateTokens": 1000,
+        "thinkingTokens": 100,
+        "cachedTokens": 2000,
+        "ttft": 0.3,
+        "speed": 50.0,
+        "lastAction": "运行中...",
+        "children": []
+    }
+    sub2 = {
+        "id": "sub-recycle-2",
+        "role": "Worker 2",
+        "type": "worker",
+        "state": "running",
+        "totalTokens": 8000,
+        "costUsd": 0.009,
+        "promptTokens": 7000,
+        "candidateTokens": 1000,
+        "thinkingTokens": 50,
+        "cachedTokens": 3000,
+        "ttft": 0.4,
+        "speed": 60.0,
+        "lastAction": "分析中...",
+        "children": []
+    }
+
+    data = {
+        "conversationId": "recycle-session-1",
+        "title": "Recycle Session",
+        "activeContext": 12000,
+        "breakdown": {},
+        "turn": {},
+        "cumulative": {"costUsd": 0.02, "billedTokens": 12000},
+        "cluster": {
+            "totalTokens": 13000,
+            "totalCostUsd": 0.014,
+            "combinedCostUsd": 0.034,
+            "totalCount": 2,
+            "runningCount": 2,
+            "doneCount": 0,
+            "subagents": [sub1, sub2]
+        }
+    }
+
+    window.update_data(data)
+    assert len(window.subagent_cards) == 2
+    card1_initial = window.subagent_cards[0]
+    card2_initial = window.subagent_cards[1]
+    assert card1_initial.lbl_tok.text() == "计费 5.0k"
+    assert card2_initial.lbl_tok.text() == "计费 8.0k"
+
+    # Step 1: Update token counts for sub1 and sub2
+    sub1_v2 = dict(sub1, totalTokens=9500, costUsd=0.011, state="done", lastAction="已完成")
+    sub2_v2 = dict(sub2, totalTokens=14000, costUsd=0.016)
+    data_v2 = dict(data, cluster={
+        "totalTokens": 23500,
+        "totalCostUsd": 0.027,
+        "combinedCostUsd": 0.047,
+        "totalCount": 2,
+        "runningCount": 1,
+        "doneCount": 1,
+        "subagents": [sub1_v2, sub2_v2]
+    })
+
+    window.update_data(data_v2)
+    assert len(window.subagent_cards) == 2
+    # Verify card widget identity is preserved (recycled in-place, NOT deleted or recreated)
+    assert window.subagent_cards[0] is card1_initial
+    assert window.subagent_cards[1] is card2_initial
+    assert card1_initial.lbl_tok.text() == "计费 9.5k"
+    assert card1_initial.lbl_cost.text() == "$0.011"
+    assert card2_initial.lbl_tok.text() == "计费 14.0k"
+    assert card2_initial.lbl_cost.text() == "$0.016"
+
+    # Step 2: Remove sub2, add sub3
+    sub3 = {
+        "id": "sub-recycle-3",
+        "role": "Worker 3",
+        "type": "worker",
+        "state": "running",
+        "totalTokens": 2000,
+        "costUsd": 0.002,
+        "promptTokens": 1800,
+        "candidateTokens": 200,
+        "thinkingTokens": 0,
+        "cachedTokens": 500,
+        "ttft": 0.2,
+        "speed": 40.0,
+        "lastAction": "新增智能体",
+        "children": []
+    }
+    data_v3 = dict(data, cluster={
+        "totalTokens": 11500,
+        "totalCostUsd": 0.013,
+        "combinedCostUsd": 0.033,
+        "totalCount": 2,
+        "runningCount": 1,
+        "doneCount": 1,
+        "subagents": [sub1_v2, sub3]
+    })
+
+    window.update_data(data_v3)
+    assert len(window.subagent_cards) == 2
+    assert window.subagent_cards[0] is card1_initial
+    card3 = window.subagent_cards[1]
+    assert card3 is not card2_initial
+    assert card3.agent_data.get("id") == "sub-recycle-3"
+    assert card3.lbl_tok.text() == "计费 2.0k"
+
+
+
 
 

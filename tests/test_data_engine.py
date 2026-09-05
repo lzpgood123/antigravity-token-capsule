@@ -489,3 +489,39 @@ def test_recursive_multilevel_subagent_discovery(mock_antigravity_env):
     assert c_a["totalTokens"] == 30000
 
 
+def test_extract_session_metrics_guarantees_connection_close_on_error(mock_antigravity_env, monkeypatch):
+    """Verifies that SQLite connection is closed via finally block even if cursor.execute fails."""
+    env = mock_antigravity_env
+    engine = DataEngine()
+    engine.conv_dir = env["conv_dir"]
+
+    conv_id = "test-error-db-session"
+    db_file = os.path.join(env["conv_dir"], f"{conv_id}.db")
+    create_mock_db(db_file, [make_test_proto_blob(prompt=1000, candidates=500)])
+
+    closed = []
+    real_connect = sqlite3.connect
+
+    class MockConnection:
+        def __init__(self, *args, **kwargs):
+            self._real = real_connect(*args, **kwargs)
+
+        def cursor(self):
+            c = self._real.cursor()
+            def faulty_execute(*args, **kwargs):
+                raise sqlite3.DatabaseError("Simulated corrupt table execution")
+            c.execute = faulty_execute
+            return c
+
+        def close(self):
+            closed.append(True)
+            self._real.close()
+
+    monkeypatch.setattr(sqlite3, "connect", lambda *args, **kwargs: MockConnection(*args, **kwargs))
+
+    metrics = engine._extract_session_metrics(conv_id)
+    assert metrics["has_data"] is False
+    assert len(closed) == 1, "Connection must be safely closed in finally block despite execute error"
+
+
+
