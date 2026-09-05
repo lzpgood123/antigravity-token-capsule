@@ -394,15 +394,6 @@ QLabel#PillCost {{
     font-size: 12px;
     font-weight: 700;
 }}
-QLabel#BadgeCompact {{
-    font-size: 10px;
-    font-weight: 700;
-    color: #ea580c;
-    background-color: rgba(254, 215, 170, 0.35);
-    border: 1px solid #fdba74;
-    border-radius: 4px;
-    padding: 1px 5px;
-}}
 """
 
 class SegmentedProgressBar(QWidget):
@@ -990,17 +981,6 @@ class CapsuleWindow(QWidget):
         self.lbl_hero_sub = QLabel("已使用 0K/ 256.0K", self.view_primary)
         self.lbl_hero_sub.setObjectName("HeroSub")
         hero_box.addWidget(self.lbl_hero_sub)
-
-        self.badge_compact = QLabel(self.view_primary)
-        self.badge_compact.setObjectName("BadgeCompact")
-        self.badge_compact.setStyleSheet(
-            "font-size: 10px; font-weight: 700; color: #ea580c; "
-            "background-color: rgba(254, 215, 170, 0.35); border: 1px solid #fdba74; "
-            "border-radius: 4px; padding: 1px 5px;"
-        )
-        self.badge_compact.setVisible(False)
-        hero_box.addWidget(self.badge_compact)
-
         hero_box.addStretch()
 
         v_primary_l.addLayout(hero_box)
@@ -1056,7 +1036,7 @@ class CapsuleWindow(QWidget):
         self.r_speed, self.val_speed = self.create_list_row("#f59e0b", "模型生成速度")
         summary_box.addLayout(self.r_speed)
 
-        self.r_cost, self.val_cost = self.create_list_row("#d97706", "累计折算费用 (Gemini 3.8 Flash)")
+        self.r_cost, self.val_cost = self.create_list_row("#d97706", "累计折算费用")
         self.lbl_cost_name = getattr(self.val_cost, "label_widget", None)
         if self.lbl_cost_name:
             self.lbl_cost_name.setObjectName("CostNameLabel")
@@ -1304,16 +1284,6 @@ class CapsuleWindow(QWidget):
         else:
             self.lbl_hero_pct.setStyleSheet("")
             self.lbl_hero_sub.setText(f"已使用 {fmt_tokens(active_ctx)} / 256k")
-
-        if compact_count >= 1:
-            self.badge_compact.setText(f"⚡ 压缩 {compact_count} 次")
-            self.badge_compact.setToolTip(
-                f"该会话已触发 {compact_count} 次上下文自动截断压缩 (CHECKPOINT)。\n"
-                f"为防长文本溢出，更早的历史消息已被系统截断并置换为概要信息。"
-            )
-            self.badge_compact.setVisible(True)
-        else:
-            self.badge_compact.setVisible(False)
 
         # 2. 分段多彩进度条
         b_sys = breakdown.get("system", {}).get("tokens", 0)

@@ -740,21 +740,20 @@ def test_subagent_cards_incremental_diff_and_recycling(window):
     assert card3.lbl_tok.text() == "计费 2.0k"
 
 
-def test_context_compaction_badge_and_pricing_transparency(window):
-    """Tests that compactCount >= 1 triggers Hero badge, summary row, and Gemini 3.8 Flash is transparently labeled."""
+def test_context_compaction_summary_and_clean_cost_label(window):
+    """Tests that compactCount is displayed cleanly in summary row, and cost label is concise while tooltip retains rates."""
     # 1. When compactCount is 0
     data_zero = make_sample_data(with_subagents=False)
     data_zero["compactCount"] = 0
     window.update_data(data_zero)
 
-    assert hasattr(window, "badge_compact"), "Window should have badge_compact widget"
-    assert window.badge_compact.isVisible() is False
-    assert hasattr(window, "val_compact"), "Window should have val_compact widget"
+    assert not hasattr(window, "badge_compact"), "Hero badge should be removed as per design refinement"
+    assert hasattr(window, "val_compact"), "Window should have val_compact widget in summary list"
     assert "0 次" in window.val_compact.text()
 
     # Pricing label & tooltip check
-    assert hasattr(window, "lbl_cost_name"), "Window should have lbl_cost_name or pricing label"
-    assert "Gemini 3.8 Flash" in window.lbl_cost_name.text()
+    assert hasattr(window, "lbl_cost_name"), "Window should have lbl_cost_name label"
+    assert window.lbl_cost_name.text() == "累计折算费用", "Cost label should be clean and not truncated"
     assert "Gemini 3.8 Flash" in window.val_cost.toolTip()
     assert "$0.75" in window.val_cost.toolTip()
 
@@ -763,8 +762,6 @@ def test_context_compaction_badge_and_pricing_transparency(window):
     data_compacted["compactCount"] = 2
     window.update_data(data_compacted)
 
-    assert window.badge_compact.isVisible() is True
-    assert "压缩 2 次" in window.badge_compact.text()
-    assert "CHECKPOINT" in window.badge_compact.toolTip()
     assert "2 次" in window.val_compact.text()
+    assert "Checkpoint" in window.val_compact.text()
 
