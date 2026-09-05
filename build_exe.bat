@@ -89,7 +89,7 @@ if not exist "dist\onedir\token-capsule\_internal\base_library.zip" (
 echo.
 echo [3/4] Creating Portable ZIP Archive...
 if not exist "dist\zip" mkdir "dist\zip"
-powershell -Command "Compress-Archive -Path 'dist\onedir\token-capsule\*' -DestinationPath 'dist\zip\token-capsule-v1.1.0-windows-x64.zip' -Force"
+powershell -Command "Compress-Archive -Path 'dist\onedir\token-capsule\*' -DestinationPath 'dist\zip\token-capsule-v1.1.1-windows-x64.zip' -Force"
 
 echo.
 echo [4/4] Checking and Compiling Inno Setup Installer...
@@ -116,8 +116,8 @@ echo   BUILD COMPLETED SUCCESSFULLY!
 echo ========================================================
 echo.
 echo Output Deliverables:
-echo   1. Windows Installer: dist\installer\token-capsule-Setup-v1.1.0.exe
-echo   2. Portable ZIP:      dist\zip\token-capsule-v1.1.0-windows-x64.zip
+echo   1. Windows Installer: dist\installer\token-capsule-Setup-v1.1.1.exe
+echo   2. Portable ZIP:      dist\zip\token-capsule-v1.1.1-windows-x64.zip
 echo   3. Standalone EXE:    dist\onefile\token-capsule.exe
 echo   4. Portable dir:      dist\onedir\token-capsule\
 echo.
