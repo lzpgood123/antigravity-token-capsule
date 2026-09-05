@@ -740,6 +740,31 @@ def test_subagent_cards_incremental_diff_and_recycling(window):
     assert card3.lbl_tok.text() == "计费 2.0k"
 
 
+def test_context_compaction_badge_and_pricing_transparency(window):
+    """Tests that compactCount >= 1 triggers Hero badge, summary row, and Gemini 3.8 Flash is transparently labeled."""
+    # 1. When compactCount is 0
+    data_zero = make_sample_data(with_subagents=False)
+    data_zero["compactCount"] = 0
+    window.update_data(data_zero)
 
+    assert hasattr(window, "badge_compact"), "Window should have badge_compact widget"
+    assert window.badge_compact.isVisible() is False
+    assert hasattr(window, "val_compact"), "Window should have val_compact widget"
+    assert "0 次" in window.val_compact.text()
 
+    # Pricing label & tooltip check
+    assert hasattr(window, "lbl_cost_name"), "Window should have lbl_cost_name or pricing label"
+    assert "Gemini 3.8 Flash" in window.lbl_cost_name.text()
+    assert "Gemini 3.8 Flash" in window.val_cost.toolTip()
+    assert "$0.75" in window.val_cost.toolTip()
+
+    # 2. When compactCount is 2
+    data_compacted = make_sample_data(with_subagents=False)
+    data_compacted["compactCount"] = 2
+    window.update_data(data_compacted)
+
+    assert window.badge_compact.isVisible() is True
+    assert "压缩 2 次" in window.badge_compact.text()
+    assert "CHECKPOINT" in window.badge_compact.toolTip()
+    assert "2 次" in window.val_compact.text()
 

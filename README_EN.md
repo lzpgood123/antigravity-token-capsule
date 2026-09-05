@@ -62,9 +62,17 @@ When developing with **Google Antigravity**, developers frequently encounter the
 * 📐 **Hybrid Dual-Layout Modes**  
   * **Compact Tabbed Mode (320px)**: Top segmented tabs to switch seamlessly between `[💬 Primary Session]` and `[🤖 Subagents · N]` with smooth collapsible accordion cards for distraction-free coding.
   * **Dual-Wing Radar Mode (680px)**: Side-by-side panoramic split view displaying the primary session card on the left and full-scale subagent cluster radar on the right, complete with a global combined billing bar.
-* 💰 **Turn & Cumulative Cost Metering with Dual-Billing Linkage**  
-  * Decoupled physical context and financial accounting: Primary 256k progress bar strictly tracks active window capacity, while the footer displays `Total Cost: $X.XXX (incl. Subagents: $Y.YYY)`.
-  * Real-time tracking of uncached prompt, generated candidates, Prompt Cache hits, and deep thinking tokens with live dollar conversions.
+* 💰 **Cost Metering & Dual-Billing Linkage (Gemini 3.8 Flash Baseline)**  
+  * **Authoritative Baseline Model**: Dollar conversions strictly adhere to **Google Gemini 3.8 Flash** official pricing:
+    | Dimension | Rate | Description |
+    | :--- | :--- | :--- |
+    | **Input (Prompt)** | **$0.75 / 1M tokens** | Uncached turn prompt tokens |
+    | **Output (Candidate)** | **$3.75 / 1M tokens** | Generated thinking and response tokens |
+    | **Cache Hit (Prompt Cache)** | **$0.15 / 1M tokens** | Context caching discount saving compute cost |
+  * **Dual-Billing Linkage**: The progress bar strictly tracks the active 256k physical window, while the card displays `Total Cost (Gemini 3.8 Flash): $X.XXX (incl. Subagents: $Y.YYY)` with transparent hover tooltips.
+* ⚡ **Context Auto-Compaction Telemetry**  
+  * Sniffs `type: "CHECKPOINT"` truncation markers from conversation logs to count the exact number of times historical context has been auto-summarized by Antigravity.
+  * **Hero Badge Alert**: A vibrant orange badge (e.g., `⚡ 压缩 2 次`) appears next to the core percentage whenever context compaction occurs (`>= 1`), accompanied by an explicit `Context Auto-Compaction` summary metric.
 * 🎨 **5 Beautiful Built-in Themes & Modern Desktop UX**  
   * Ultra-compact frameless pill shape with smooth mouse dragging and one-click card expansion.
   * **5 live-switchable themes**: Pure Light, Obsidian Dark, Frosted Aurora, Matrix Neon, and Warm Paper (persisted across restarts).

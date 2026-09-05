@@ -394,6 +394,15 @@ QLabel#PillCost {{
     font-size: 12px;
     font-weight: 700;
 }}
+QLabel#BadgeCompact {{
+    font-size: 10px;
+    font-weight: 700;
+    color: #ea580c;
+    background-color: rgba(254, 215, 170, 0.35);
+    border: 1px solid #fdba74;
+    border-radius: 4px;
+    padding: 1px 5px;
+}}
 """
 
 class SegmentedProgressBar(QWidget):
@@ -981,6 +990,17 @@ class CapsuleWindow(QWidget):
         self.lbl_hero_sub = QLabel("已使用 0K/ 256.0K", self.view_primary)
         self.lbl_hero_sub.setObjectName("HeroSub")
         hero_box.addWidget(self.lbl_hero_sub)
+
+        self.badge_compact = QLabel(self.view_primary)
+        self.badge_compact.setObjectName("BadgeCompact")
+        self.badge_compact.setStyleSheet(
+            "font-size: 10px; font-weight: 700; color: #ea580c; "
+            "background-color: rgba(254, 215, 170, 0.35); border: 1px solid #fdba74; "
+            "border-radius: 4px; padding: 1px 5px;"
+        )
+        self.badge_compact.setVisible(False)
+        hero_box.addWidget(self.badge_compact)
+
         hero_box.addStretch()
 
         v_primary_l.addLayout(hero_box)
@@ -1021,6 +1041,9 @@ class CapsuleWindow(QWidget):
         summary_box = QVBoxLayout()
         summary_box.setSpacing(5)
 
+        self.r_compact, self.val_compact = self.create_list_row("#ea580c", "上下文自动压缩")
+        summary_box.addLayout(self.r_compact)
+
         self.r_cache, self.val_cache = self.create_list_row("#10b981", "Prompt 缓存命中")
         summary_box.addLayout(self.r_cache)
 
@@ -1033,7 +1056,10 @@ class CapsuleWindow(QWidget):
         self.r_speed, self.val_speed = self.create_list_row("#f59e0b", "模型生成速度")
         summary_box.addLayout(self.r_speed)
 
-        self.r_cost, self.val_cost = self.create_list_row("#d97706", "累计折算费用")
+        self.r_cost, self.val_cost = self.create_list_row("#d97706", "累计折算费用 (Gemini 3.8 Flash)")
+        self.lbl_cost_name = getattr(self.val_cost, "label_widget", None)
+        if self.lbl_cost_name:
+            self.lbl_cost_name.setObjectName("CostNameLabel")
         summary_box.addLayout(self.r_cost)
 
         v_primary_l.addLayout(summary_box)
@@ -1252,6 +1278,7 @@ class CapsuleWindow(QWidget):
 
         val = QLabel("-", self)
         val.setProperty("class", "ItemVal")
+        val.label_widget = lbl
         h.addWidget(val)
 
         return h, val
@@ -1266,6 +1293,7 @@ class CapsuleWindow(QWidget):
         cum = data.get("cumulative", {})
         cluster = data.get("cluster", {})
         subagents = cluster.get("subagents", [])
+        compact_count = data.get("compactCount", 0)
 
         # 1. 核心大字号百分比 (基于 256k 截断基准)
         ctx_pct = (active_ctx / self.max_context * 100) if self.max_context > 0 else 0.0
@@ -1276,6 +1304,16 @@ class CapsuleWindow(QWidget):
         else:
             self.lbl_hero_pct.setStyleSheet("")
             self.lbl_hero_sub.setText(f"已使用 {fmt_tokens(active_ctx)} / 256k")
+
+        if compact_count >= 1:
+            self.badge_compact.setText(f"⚡ 压缩 {compact_count} 次")
+            self.badge_compact.setToolTip(
+                f"该会话已触发 {compact_count} 次上下文自动截断压缩 (CHECKPOINT)。\n"
+                f"为防长文本溢出，更早的历史消息已被系统截断并置换为概要信息。"
+            )
+            self.badge_compact.setVisible(True)
+        else:
+            self.badge_compact.setVisible(False)
 
         # 2. 分段多彩进度条
         b_sys = breakdown.get("system", {}).get("tokens", 0)
@@ -1306,6 +1344,14 @@ class CapsuleWindow(QWidget):
         cum_th = cum.get("thinkingTokens", 0)
         cum_billed = cum.get("billedTokens", 0)
         cum_cost = cum.get("costUsd", 0.0)
+
+        # 上下文自动压缩指标
+        if compact_count >= 1:
+            self.val_compact.setText(f"{compact_count} 次 (Checkpoint)")
+            self.val_compact.setStyleSheet("color: #ea580c; font-weight: 700;")
+        else:
+            self.val_compact.setText("0 次")
+            self.val_compact.setStyleSheet("")
 
         self.val_cache.setText(f"{fmt_tokens(cum_ca)} ({cum_ratio:.1f}%)")
         th_str = f" (思考 {fmt_tokens(cum_th)})" if cum_th > 0 else ""
@@ -1341,6 +1387,11 @@ class CapsuleWindow(QWidget):
             self.val_cost.setText(f"${cum_cost:.3f} (含 Subagents: ${combined_cost:.3f})")
         else:
             self.val_cost.setText(f"${cum_cost:.3f} (计费 {fmt_tokens(cum_billed)})")
+
+        cost_tooltip = "基准费率基于 Google Gemini 3.8 Flash: 输入 $0.75/M, 输出 $3.75/M, 缓存命中 $0.15/M"
+        self.val_cost.setToolTip(cost_tooltip)
+        if hasattr(self, "lbl_cost_name") and self.lbl_cost_name:
+            self.lbl_cost_name.setToolTip(cost_tooltip)
 
         # 5. 更新 Subagents Tab 徽章与微仪表盘
         sub_count = cluster.get("totalCount", len(cluster.get("allSubagents", [])) or len(subagents))
@@ -1427,6 +1478,8 @@ class CapsuleWindow(QWidget):
 
         # 7. 收起迷你药丸态
         pill_text = f"{ctx_pct:.1f}% 上下文"
+        if compact_count > 0:
+            pill_text += f" · ⚡{compact_count}"
         if running_cnt > 0:
             pill_text += f" · 🤖{running_cnt}"
         self.pill_info.setText(pill_text)
@@ -1438,6 +1491,7 @@ class CapsuleWindow(QWidget):
             self.pill_perf.setVisible(False)
             self.pill_sep2.setVisible(False)
         self.pill_cost_lbl.setText(f"${combined_cost:.2f}" if cluster_cost > 0 else f"${cum_cost:.2f}")
+        self.pill_cost_lbl.setToolTip(cost_tooltip)
 
         title = data.get("title", "")
         cid = data.get("conversationId", "")

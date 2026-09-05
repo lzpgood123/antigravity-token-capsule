@@ -310,6 +310,29 @@ class DataEngine(QObject):
         if full_data:
             self.session_updated.emit(full_data)
 
+    def _get_compact_count(self, conv_id: str) -> int:
+        """统计特定会话 transcript.jsonl 中触发的上下文自动压缩检查点 (CHECKPOINT) 次数"""
+        if not conv_id:
+            return 0
+        transcript_path = os.path.join(self.brain_dir, conv_id, ".system_generated", "logs", "transcript.jsonl")
+        if not os.path.exists(transcript_path):
+            return 0
+        count = 0
+        try:
+            with open(transcript_path, "r", encoding="utf-8", errors="ignore") as f:
+                for line in f:
+                    if '"CHECKPOINT"' in line:
+                        try:
+                            data = json.loads(line)
+                            if data.get("type") == "CHECKPOINT":
+                                count += 1
+                        except Exception:
+                            if '"type":"CHECKPOINT"' in line or '"type": "CHECKPOINT"' in line:
+                                count += 1
+        except Exception:
+            pass
+        return count
+
     def _scan_single_transcript_for_subagents(self, conv_id: str) -> dict:
         """从特定会话的 transcript.jsonl (及 transcript_full.jsonl) 中提取直接派生的子智能体"""
         if not conv_id:
@@ -670,6 +693,7 @@ class DataEngine(QObject):
                 "candidateTokens": m["candidateTokens"],
                 "thinkingTokens": m["thinkingTokens"],
                 "cachedTokens": m["cachedTokens"],
+                "compactCount": self._get_compact_count(cid),
                 "ttft": ttft,
                 "speed": speed,
                 "lastAction": s.get("lastAction") or ("执行中..." if state == "running" else "已完成任务"),
@@ -744,6 +768,7 @@ class DataEngine(QObject):
             "autoFollow": self.auto_follow,
             "activeContext": active_context,
             "breakdown": breakdown,
+            "compactCount": self._get_compact_count(conv_id),
             "turn": {
                 "promptTokens": turn_p,
                 "candidateTokens": turn_c,

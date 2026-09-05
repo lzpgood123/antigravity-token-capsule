@@ -524,4 +524,32 @@ def test_extract_session_metrics_guarantees_connection_close_on_error(mock_antig
     assert len(closed) == 1, "Connection must be safely closed in finally block despite execute error"
 
 
+def test_convo_stats_detects_context_compaction_checkpoints(mock_antigravity_env):
+    """Tests that DataEngine counts CHECKPOINT events in transcript.jsonl as compactCount."""
+    env = mock_antigravity_env
+    engine = DataEngine()
+    engine.conv_dir = env["conv_dir"]
+    engine.brain_dir = env["brain_dir"]
 
+    conv_id = "test-compact-session-001"
+    db_file = os.path.join(env["conv_dir"], f"{conv_id}.db")
+    create_mock_db(db_file, [make_test_proto_blob(prompt=20000, candidates=1500)])
+
+    # 1. Before any transcript, compactCount should be 0
+    stats = engine.get_convo_stats(conv_id)
+    assert stats["compactCount"] == 0
+
+    # 2. Write transcript.jsonl with 2 CHECKPOINT events
+    logs_dir = os.path.join(env["brain_dir"], conv_id, ".system_generated", "logs")
+    os.makedirs(logs_dir, exist_ok=True)
+    transcript_path = os.path.join(logs_dir, "transcript.jsonl")
+
+    with open(transcript_path, "w", encoding="utf-8") as f:
+        f.write(json.dumps({"step_index": 1, "source": "USER_EXPLICIT", "type": "USER_INPUT", "content": "Hello"}) + "\n")
+        f.write(json.dumps({"step_index": 2, "source": "SYSTEM", "type": "CHECKPOINT", "content": "{{ CHECKPOINT 0 }}\n **The earlier parts...**"}) + "\n")
+        f.write(json.dumps({"step_index": 3, "source": "MODEL", "type": "PLANNER_RESPONSE", "content": "Working..."}) + "\n")
+        f.write(json.dumps({"step_index": 4, "source": "SYSTEM", "type": "CHECKPOINT", "content": "{{ CHECKPOINT 1 }}\n **The earlier parts...**"}) + "\n")
+
+    # 3. get_convo_stats should detect compactCount == 2
+    stats2 = engine.get_convo_stats(conv_id)
+    assert stats2["compactCount"] == 2

@@ -81,6 +81,14 @@
 * **定义**：将 GitHub 仓库的 20 个 Topics 槽位划分为“顶级公域漏斗 ➔ 官方生态模型 ➔ 垂直功能遥测 ➔ 源码形态架构”四个互不重叠梯次的立体 SEO 架构，实现搜索漏斗与 Explore 推荐流的最大化拦截。
 * _Avoid_：不要随意堆砌同义词或冷门长尾词。
 
+### 17. 上下文自动压缩 (Context Auto-Compaction / Checkpoint)
+* **定义**：当 Antigravity 会话累积的上下文达到物理窗口限制或触发截断策略时，系统在后台对早期历史消息执行修剪与摘要生成，并在 `transcript.jsonl` 中记录一条 `type: "CHECKPOINT"` 的截断检查点。胶囊通过实时嗅探 Checkpoint 频次，向开发者预警上下文已被精简的次数。
+* _Avoid_：不要称作 "清除历史" (History Wipe) 或 "消息丢失" (Message Drop)；截断经过了结构化摘要，但开发者必须知晓早期精确记忆已被修剪。
+
+### 18. 基准计费模型 (Baseline Pricing Model / Gemini 3.8 Flash)
+* **定义**：Token Capsule 内部计算与折算美元财务消耗的基准参照费率模型。严格对标 Google Gemini 3.8 Flash 官方标准折算：输入 \$0.75/M tokens、输出 \$3.75/M tokens、Prompt 缓存命中 \$0.15/M tokens。
+* _Avoid_：不要含糊称作 "模型费率" 或误导为 Claude 等其他模型定价；所有 UI 与文档必须明确标注计费基准为 Gemini 3.8 Flash。
+
 ---
 
 ## 🏛️ 领域关系映射
