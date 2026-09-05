@@ -1,0 +1,25 @@
+# Dependencies & Virtual Environments
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution & Build
+dist/
+build/
+*.spec
+
+# Logs & Testing
+*.log
+.pytest_cache/
+.coverage
+
+# Internal Agent scratchpad & issues
+.scratch/
+
+# OS & IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
