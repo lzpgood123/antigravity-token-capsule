@@ -9,7 +9,7 @@ from PySide6.QtCore import Qt
 # 处理 PyInstaller 打包环境与开发环境路径
 if getattr(sys, 'frozen', False):
     base_dir = getattr(sys, '_MEIPASS', os.path.dirname(sys.executable))
-    app_exe = sys.executable
+    app_exe = f'"{sys.executable}"'
 else:
     base_dir = os.path.dirname(os.path.abspath(__file__))
     app_exe = f'"{sys.executable}" "{os.path.abspath(__file__)}"'
@@ -82,7 +82,7 @@ def main():
     icon = get_app_icon()
     app.setWindowIcon(icon)
 
-    window = CapsuleWindow()
+    window = CapsuleWindow(default_layout_mode="compact")
     engine = DataEngine()
     engine.session_updated.connect(window.update_data)
     engine.recent_list_updated.connect(window.update_recent_list)
