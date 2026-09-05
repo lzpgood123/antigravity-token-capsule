@@ -69,6 +69,18 @@
   3. **单文件独立版 (Standalone Single-File)**：PyInstaller `--onefile` 生成，免解压单文件，含 2 秒临时自解压。
 * _Avoid_：不要混淆安装包与纯单文件版；安装包分发单文件但运行多文件版。
 
+### 14. 就地增量复用 (In-Place UI Recycling)
+* **定义**：在 UI 周期性轮询刷新时，严格复用已存在的控件实例，仅增量更新变更的数据属性与指示器，禁止全量销毁与重建控件树。
+* _Avoid_：不要称作 "列表全量重绘" (Full List Rebuild) 或 "清空重建" (Clear and Rebuild)。
+
+### 15. 真实底衬离屏合成 (IDE-Anchored Offscreen Synthesis)
+* **定义**：脱离真实外部环境依赖，利用离屏 Qt 状态机将胶囊渲染图层按真实视口坐标混合至 Google Antigravity IDE 伴生底衬，并结合矢量光标与水波纹生成高拟真演示动图的渲染管道。
+* _Avoid_：不要称作 "屏幕录制" (Screen Capture) 或 "纯黑盒模拟" (Mockup)。
+
+### 16. 四层漏斗标签矩阵 (4-Tier Topic Funnel Matrix)
+* **定义**：将 GitHub 仓库的 20 个 Topics 槽位划分为“顶级公域漏斗 ➔ 官方生态模型 ➔ 垂直功能遥测 ➔ 源码形态架构”四个互不重叠梯次的立体 SEO 架构，实现搜索漏斗与 Explore 推荐流的最大化拦截。
+* _Avoid_：不要随意堆砌同义词或冷门长尾词。
+
 ---
 
 ## 🏛️ 领域关系映射
