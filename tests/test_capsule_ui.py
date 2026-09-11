@@ -127,6 +127,7 @@ def test_data_update_without_subagents(window):
     assert "$0.081" in window.val_cost.text()
     assert "含 Subagents" not in window.val_cost.text()
     assert "含集群" not in window.val_cost.text()
+    assert "缓存命中 $0.075/M" in window.val_cost.toolTip()
     # Tab badge should reflect 0
     assert window.btn_tab_cluster.text() in ("🤖 Subagents", "🤖 智能体集群") or "0" in window.btn_tab_cluster.text()
 

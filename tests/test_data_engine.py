@@ -553,3 +553,31 @@ def test_convo_stats_detects_context_compaction_checkpoints(mock_antigravity_env
     # 3. get_convo_stats should detect compactCount == 2
     stats2 = engine.get_convo_stats(conv_id)
     assert stats2["compactCount"] == 2
+
+
+def test_baseline_pricing_calculation_with_cache_discount(mock_antigravity_env):
+    """Tests that cumulative and turn cost formulas strictly use $0.075/M for cached tokens."""
+    env = mock_antigravity_env
+    engine = DataEngine()
+    engine.conv_dir = env["conv_dir"]
+    engine.brain_dir = env["brain_dir"]
+
+    conv_id = "test-pricing-session-001"
+    db_file = os.path.join(env["conv_dir"], f"{conv_id}.db")
+
+    # Prompt: 10,000 ($0.0075), Candidates: 2,000 ($0.0075), Cached: 10,000 ($0.00075)
+    # Expected turn cost = (10000*0.75 + 2000*3.75 + 10000*0.075) / 1e6 = (7500 + 7500 + 750) / 1e6 = 0.01575
+    # round(0.01575, 4) = 0.0158
+    blob = make_test_proto_blob(prompt=10000, candidates=2000, cached=10000)
+    create_mock_db(db_file, [blob])
+
+    stats = engine.get_convo_stats(conv_id)
+    assert stats is not None
+
+    expected_turn_cost = round((10000 * 0.75 + 2000 * 3.75 + 10000 * 0.075) / 1e6, 4)
+    expected_cum_cost = round((10000 * 0.75 + 2000 * 3.75 + 10000 * 0.075) / 1e6, 3)
+
+    assert stats["turn"]["costUsd"] == expected_turn_cost
+    assert stats["cumulative"]["costUsd"] == expected_cum_cost
+    assert stats["turn"]["costUsd"] == 0.0158
+    assert stats["cumulative"]["costUsd"] == 0.016

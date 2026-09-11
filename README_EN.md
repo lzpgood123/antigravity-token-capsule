@@ -10,7 +10,7 @@
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows-0078D6.svg?logo=windows)](#)
 [![Python: 3.10+](https://img.shields.io/badge/Python-3.10%2B-brightgreen.svg?logo=python)](#)
 [![GUI: PySide6](https://img.shields.io/badge/GUI-PySide6-41CD52.svg?logo=qt)](#)
-[![Release: v1.2.0](https://img.shields.io/badge/Release-v1.2.0-orange.svg)](https://github.com/lzpgood123/antigravity-token-capsule/releases)
+[![Release: v1.2.1](https://img.shields.io/badge/Release-v1.2.1-orange.svg)](https://github.com/lzpgood123/antigravity-token-capsule/releases)
 
 </div>
 
@@ -68,7 +68,7 @@ When developing with **Google Antigravity**, developers frequently encounter the
     | :--- | :--- | :--- |
     | **Input (Prompt)** | **$0.75 / 1M tokens** | Uncached turn prompt tokens |
     | **Output (Candidate)** | **$3.75 / 1M tokens** | Generated thinking and response tokens |
-    | **Cache Hit (Prompt Cache)** | **$0.15 / 1M tokens** | Context caching discount saving compute cost |
+    | **Cache Hit (Prompt Cache)** | **$0.075 / 1M tokens** | Context caching discount saving compute cost |
   * **Dual-Billing Linkage**: The progress bar strictly tracks the active 256k physical window, while the card displays `Total Cost (Gemini 3.8 Flash): $X.XXX (incl. Subagents: $Y.YYY)` with transparent hover tooltips.
 * ⚡ **Context Auto-Compaction Telemetry**  
   * Sniffs `type: "CHECKPOINT"` truncation markers from conversation logs to count the exact number of times historical context has been auto-summarized by Antigravity.

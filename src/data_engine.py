@@ -616,8 +616,8 @@ class DataEngine(QObject):
         avg_ttft = (sum(ttft_list) / len(ttft_list)) if ttft_list else 0.0
         avg_speed = (cum_c / cum_cand_time) if cum_cand_time > 0 else 0.0
         cum_billed = cum_p + cum_c
-        # Gemini 3.8 Flash 体验优惠价: 输入 $0.75/M, 输出 $3.75/M, 缓存 $0.15/M
-        cum_cost = (cum_p * 0.75 + cum_c * 3.75 + cum_ca * 0.15) / 1e6
+        # Gemini 3.8 Flash 体验优惠价: 输入 $0.75/M, 输出 $3.75/M, 缓存 $0.075/M
+        cum_cost = (cum_p * 0.75 + cum_c * 3.75 + cum_ca * 0.075) / 1e6
 
         return {
             "promptTokens": cum_p,
@@ -774,7 +774,7 @@ class DataEngine(QObject):
                 "candidateTokens": turn_c,
                 "cachedTokens": turn_ca,
                 "thinkingTokens": turn_th,
-                "costUsd": round((turn_p * 0.75 + turn_c * 3.75 + turn_ca * 0.15) / 1e6, 4),
+                "costUsd": round((turn_p * 0.75 + turn_c * 3.75 + turn_ca * 0.075) / 1e6, 4),
                 "ttft": round(turn_ttft, 2),
                 "speed": round(turn_speed, 1)
             },

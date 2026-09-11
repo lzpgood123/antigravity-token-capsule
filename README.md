@@ -10,7 +10,7 @@
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows-0078D6.svg?logo=windows)](#)
 [![Python: 3.10+](https://img.shields.io/badge/Python-3.10%2B-brightgreen.svg?logo=python)](#)
 [![GUI: PySide6](https://img.shields.io/badge/GUI-PySide6-41CD52.svg?logo=qt)](#)
-[![Release: v1.2.0](https://img.shields.io/badge/Release-v1.2.0-orange.svg)](https://github.com/lzpgood123/antigravity-token-capsule/releases)
+[![Release: v1.2.1](https://img.shields.io/badge/Release-v1.2.1-orange.svg)](https://github.com/lzpgood123/antigravity-token-capsule/releases)
 
 </div>
 
@@ -68,7 +68,7 @@
     | :--- | :--- | :--- |
     | **输入 (Prompt Input)** | **$0.75 / 1M tokens** | 未命中缓存的交互轮次输入 |
     | **输出 (Candidate Output)** | **$3.75 / 1M tokens** | 模型思考与生成内容 |
-    | **缓存命中 (Prompt Cache)** | **$0.15 / 1M tokens** | 上下文缓存命中大幅降低算力开销 |
+    | **缓存命中 (Prompt Cache)** | **$0.075 / 1M tokens** | 上下文缓存命中大幅降低算力开销 |
   * **双计费联动展示**：物理上下文进度条严格反映 256k 物理窗口，底部同步展示 `累计折算费用 (Gemini 3.8 Flash): $X.XXX (含 Subagents: $Y.YYY)`，悬停 Tooltip 呈现完整单价核算。
 * ⚡ **上下文自动压缩遥测 (Context Auto-Compaction Telemetry)**  
   * 毫秒级嗅探当前会话日志中触发的 `type: "CHECKPOINT"` 截断检查点，精准还原历史上下文已被系统自动精简摘要的频次。

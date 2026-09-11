@@ -1358,7 +1358,7 @@ class CapsuleWindow(QWidget):
         else:
             self.val_cost.setText(f"${cum_cost:.3f} (计费 {fmt_tokens(cum_billed)})")
 
-        cost_tooltip = "基准费率基于 Google Gemini 3.8 Flash: 输入 $0.75/M, 输出 $3.75/M, 缓存命中 $0.15/M"
+        cost_tooltip = "基准费率基于 Google Gemini 3.8 Flash: 输入 $0.75/M, 输出 $3.75/M, 缓存命中 $0.075/M"
         self.val_cost.setToolTip(cost_tooltip)
         if hasattr(self, "lbl_cost_name") and self.lbl_cost_name:
             self.lbl_cost_name.setToolTip(cost_tooltip)

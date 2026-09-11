@@ -86,7 +86,7 @@
 * _Avoid_：不要称作 "清除历史" (History Wipe) 或 "消息丢失" (Message Drop)；截断经过了结构化摘要，但开发者必须知晓早期精确记忆已被修剪。
 
 ### 18. 基准计费模型 (Baseline Pricing Model / Gemini 3.8 Flash)
-* **定义**：Token Capsule 内部计算与折算美元财务消耗的基准参照费率模型。严格对标 Google Gemini 3.8 Flash 官方标准折算：输入 \$0.75/M tokens、输出 \$3.75/M tokens、Prompt 缓存命中 \$0.15/M tokens。
+* **定义**：Token Capsule 内部计算与折算美元财务消耗的基准参照费率模型。严格对标 Google Gemini 3.8 Flash 官方标准折算：输入 \$0.75/M tokens、输出 \$3.75/M tokens、Prompt 缓存命中 \$0.075/M tokens。
 * _Avoid_：不要含糊称作 "模型费率" 或误导为 Claude 等其他模型定价；所有 UI 与文档必须明确标注计费基准为 Gemini 3.8 Flash。
 
 ---
